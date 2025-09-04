@@ -27,16 +27,16 @@
       --select-border:#4fc3f7aa;
     }
     *{box-sizing:border-box}
-    html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font:400 16px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+      font:400 16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,Apple Color Emoji,Segoe UI Emoji}
+    a{color:var(--accent);text-decoration:none}
+
     header{
       padding:12px 14px;
       background:var(--panel);
-      position:sticky;top:0;z-index:10;
       border-bottom:1px solid #20262e;
     }
-    header .title{
-      font-weight:700;font-size:16px;margin-bottom:6px;
-    }
+    header .title{font-weight:700;font-size:16px;margin-bottom:6px}
     .device-line{
       color:var(--muted);
       font-size:13px;
@@ -45,9 +45,7 @@
       overflow:hidden;
       text-overflow:ellipsis;
     }
-    header .row{
-      display:flex;gap:10px;align-items:center;flex-wrap:wrap;
-    }
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
     input[type="file"]{
       color:var(--text);
       background:#10141a;
@@ -61,9 +59,8 @@
       padding:8px 12px;border-radius:10px;cursor:pointer;
     }
     .btn:disabled{opacity:0.6;cursor:not-allowed}
-    .legend{
-      display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;
-    }
+
+    .legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
     .chip{
       display:flex;align-items:center;gap:8px;
       background:#11161d;border:1px solid #2a313b;border-radius:999px;padding:6px 10px;cursor:pointer;
@@ -72,51 +69,49 @@
     .swatch{width:14px;height:14px;border-radius:50%}
     .chip input{display:none}
     .chip input:checked + .label{opacity:1}
-    .chip .label{opacity:0.9}
+    .chip .label{opacity:0.95}
     .chip .unit{color:var(--muted);margin-left:4px}
-    .stats{
-      display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);
-      font-size:14px;margin-top:6px;
+
+    /* Sticky bar: stays on top while scrolling (iPhone-friendly) */
+    .sticky-bar{
+      position:sticky;top:0;z-index:50;
+      padding:8px 14px;
+      background:var(--panel);
+      border-bottom:1px solid #20262e;
+      padding-top:calc(8px + env(safe-area-inset-top, 0px));
     }
-    .wrap{
-      padding:10px;
-      display:flex;flex-direction:column;gap:10px;
-    }
-    .card{
-      background:var(--panel);border:1px solid #20262e;border-radius:12px;padding:10px;
-    }
-    canvas{display:block;width:100%;height:54vh;background:#0b0f14;border-radius:10px;touch-action:none}
-    .msg{
-      font-size:14px;color:var(--muted);margin-top:6px
-    }
-    .error{color:var(--err)}
-    .ok{color:var(--ok)}
-    .warn{color:var(--warn)}
-    .footer{
-      color:var(--muted);font-size:12px;text-align:center;padding:16px
-    }
-    /* Slider */
-    .slider-wrap{
-      display:flex;align-items:center;gap:10px;flex-wrap:wrap
-    }
+    .slider-wrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
     .range{
       -webkit-appearance:none;width:min(420px, 100%);height:28px;background:transparent;padding:0;margin:0
     }
     .range:focus{outline:none}
-    .range::-webkit-slider-runnable-track{
-      height:6px;background:#2a313b;border-radius:999px;border:0
-    }
+    .range::-webkit-slider-runnable-track{height:6px;background:#2a313b;border-radius:999px;border:0}
     .range::-webkit-slider-thumb{
       -webkit-appearance:none;margin-top:-6px;
       width:18px;height:18px;border-radius:50%;background:#4fc3f7;border:2px solid #1a222b
     }
     .range::-moz-range-track{height:6px;background:#2a313b;border:0;border-radius:999px}
     .range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#4fc3f7;border:2px solid #1a222b}
+
+    .stats{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:14px;margin-top:6px}
     .kbd{
-      font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
       background:#0f141a;border:1px solid #2a313b;padding:2px 6px;border-radius:6px;color:var(--muted)
     }
-    /* Modal mapping */
+
+    .wrap{padding:10px;display:flex;flex-direction:column;gap:10px}
+    .card{background:var(--panel);border:1px solid #20262e;border-radius:12px;padding:10px}
+    canvas{
+      display:block;width:100%;height:58vh;background:#0b0f14;border-radius:10px;
+      touch-action:none; /* we handle gestures */
+    }
+    .msg{font-size:14px;color:var(--muted);margin-top:6px}
+    .error{color:var(--err)}
+    .ok{color:var(--ok)}
+    .warn{color:var(--warn)}
+    .footer{color:var(--muted);font-size:12px;text-align:center;padding:16px}
+
+    /* Modal */
     .modal-backdrop{
       position:fixed;inset:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;padding:16px;z-index:100;
     }
@@ -125,28 +120,30 @@
     }
     .modal h3{margin:0 0 8px 0}
     .modal p{color:var(--muted);margin:0 0 12px 0}
-    .row{display:flex;gap:10px;flex-wrap:wrap}
     .col{display:flex;flex-direction:column;gap:6px}
     label{font-size:14px;color:var(--muted)}
     select, input[type="number"]{
       background:#0f141a;color:var(--text);border:1px solid #2a313b;border-radius:8px;padding:8px;min-width:140px
     }
-    .modal .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
+
+    /* Selection rectangle */
+    .sel-rect{
+      background:var(--select);
+      border:1px solid var(--select-border);
+    }
   </style>
 </head>
 <body>
   <header>
     <div class="title">FIT Viewer — Heart Rate, Core Temp, Skin Temp</div>
     <div id="deviceName" class="device-line"></div>
+
     <div class="row">
       <input id="file" type="file" accept=".fit" />
       <button id="resetBtn" class="btn" disabled>Reset</button>
+      <button id="zoomModeBtn" class="btn" disabled>Zoom: Off</button>
       <button id="zoomClearBtn" class="btn" disabled>Clear Zoom</button>
       <button id="mapBtn" class="btn" disabled>Map Fields</button>
-    </div>
-    <div class="row slider-wrap">
-      <span id="smoothText" class="kbd">Smoothing: 0 s</span>
-      <input id="smoothSlider" class="range" type="range" min="0" max="100" step="1" value="0" />
     </div>
 
     <!-- Legend: base series -->
@@ -162,14 +159,22 @@
       <label class="chip"><input type="checkbox" id="toggle-pace"><span class="swatch" style="background:var(--pace)"></span><span class="label">Pace <span class="unit">(min/km)</span></span></label>
       <label class="chip"><input type="checkbox" id="toggle-cad"><span class="swatch" style="background:var(--cad)"></span><span class="label">Cadence <span class="unit">(spm)</span></span></label>
     </div>
-
-    <div class="stats" id="stats"></div>
   </header>
+
+  <!-- Sticky bar: only the slider and maxima remain visible while scrolling -->
+  <div class="sticky-bar" aria-label="Controls that stay visible">
+    <div class="row slider-wrap">
+      <span id="smoothText" class="kbd">Smoothing: 0 s</span>
+      <input id="smoothSlider" class="range" type="range" min="0" max="100" step="1" value="0" />
+      <span class="kbd" id="modeHint">Tip: Zoom mode Off — slide finger to inspect values. Turn it On to drag-select a range.</span>
+    </div>
+    <div class="stats" id="stats"></div>
+  </div>
 
   <div class="wrap">
     <div class="card">
-      <canvas id="chart" aria-label="Graph of variables over elapsed time; drag to select and zoom"></canvas>
-      <div id="message" class="msg">Load a .FIT file. Drag on the chart to zoom a time range. All parsing and rendering happen locally in your browser.</div>
+      <canvas id="chart" aria-label="Graph; slide to inspect, enable Zoom to select a range"></canvas>
+      <div id="message" class="msg">Load a .FIT file. Zoom mode is OFF by default so you can slide across the graph to see values. Turn Zoom mode ON to drag-select a time range. All parsing and rendering happen locally.</div>
     </div>
   </div>
 
@@ -203,7 +208,7 @@
         </div>
       </div>
       <div class="msg" id="mapHint"></div>
-      <div class="actions">
+      <div class="row" style="justify-content:flex-end;margin-top:12px">
         <button id="cancelMap" class="btn">Cancel</button>
         <button id="applyMap" class="btn">Apply</button>
       </div>
@@ -212,9 +217,8 @@
 
   <script>
     // Utility helpers
-    const FIT_EPOCH_OFFSET = 631065600; // seconds difference from UNIX epoch (not required for elapsed)
     const textDecoder = new TextDecoder('utf-8');
-    const SMOOTH_MAX_SEC = 30; // maximum smoothing strength (seconds)
+    const SMOOTH_MAX_SEC = 30;
 
     function clamp(v,min,max){return Math.max(min, Math.min(max, v));}
     function pad2(n){return n<10?'0'+n:''+n;}
@@ -240,7 +244,7 @@
     function niceTicks(min, max, count=5){
       if (!isFinite(min) || !isFinite(max)) return [];
       if (min===max) return [min];
-      const span = max - min;
+      const span = Math.max(1e-12, max - min);
       const step0 = Math.pow(10, Math.floor(Math.log10(span / count)));
       const err = (span / count) / step0;
       let step;
@@ -254,20 +258,23 @@
       if (ticks.length===0) ticks.push(min);
       return ticks;
     }
+    function getVar(name, fallback){
+      const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      return v || fallback;
+    }
 
-    // Manufacturer mapping (partial, common brands)
+    // Manufacturer mapping (common)
     const MANUFACTURERS = {
       1:'Garmin', 13:'SRAM', 15:'Zwift', 23:'Tacx', 32:'Wahoo', 38:'Stages',
       42:'Suunto', 70:'Hammerhead', 76:'Stages', 89:'Polar', 167:'COROS'
     };
 
-    // FIT Parser (supports definitions, developer fields, file_id/device_info/file_creator)
+    // FIT Parser (records + device_info + developer fields)
     class FitParser {
       constructor() {
         this._devKeysUsed = new Set();
-        this.devFieldSizes = new Map();
-        this.devFieldDescriptions = new Map(); // key "devIdx:fieldNum" -> {name, units}
-        this.fieldDescObjs = []; // raw parsed 206 messages
+        this.devFieldDescriptions = new Map(); // "devIdx:fieldNum" -> {name, units}
+        this.fieldDescObjs = [];
         this.fileIds = [];
         this.deviceInfos = [];
         this.fileCreators = [];
@@ -284,14 +291,14 @@
         const dataSize = view.getUint32(pos, true); pos+=4;
         const sig = String.fromCharCode(view.getUint8(pos), view.getUint8(pos+1), view.getUint8(pos+2), view.getUint8(pos+3));
         pos+=4;
-        if (headerSize === 14) pos += 2; // header CRC
+        if (headerSize === 14) pos += 2;
         if (sig !== '.FIT') throw new Error('Invalid FIT signature');
 
         const dataEnd = headerSize + dataSize;
         pos = headerSize;
 
-        const defMap = new Map(); // localMesgNum -> def
-        let lastTimestamp; // uint32 FIT epoch seconds
+        const defMap = new Map();
+        let lastTimestamp;
         const records = [];
 
         while (pos < dataEnd) {
@@ -305,9 +312,8 @@
             if (!def) throw new Error('Compressed header refers to unknown local message: ' + localNum);
 
             let ts;
-            if (lastTimestamp === undefined) {
-              ts = 0;
-            } else {
+            if (lastTimestamp === undefined) ts = 0;
+            else {
               ts = (lastTimestamp & ~31) + timeOffset;
               if (ts <= lastTimestamp) ts += 32;
             }
@@ -315,15 +321,13 @@
 
             const {obj, bytesConsumed} = this._decodeData(view, pos, def, true, ts);
             pos += bytesConsumed;
-
-            this._routeMessage(def.globalMsgNum, obj, records);
+            this._route(def.globalMsgNum, obj, records);
           } else {
             const isDefinition = (header & 0x40) !== 0;
             const hasDeveloper = (header & 0x20) !== 0;
             const localNum = header & 0x0F;
 
             if (isDefinition) {
-              // Definition message
               const reserved = view.getUint8(pos); pos+=1;
               const arch = view.getUint8(pos); pos+=1;
               const little = arch === 0;
@@ -351,7 +355,6 @@
 
               defMap.set(localNum, {globalMsgNum, little, fields, devFields});
             } else {
-              // Data message
               const def = defMap.get(localNum);
               if (!def) throw new Error('Data message refers to unknown local message: ' + localNum);
 
@@ -362,7 +365,7 @@
                 if (obj.timestamp !== undefined) lastTimestamp = obj.timestamp;
                 else if (lastTimestamp !== undefined) obj.timestamp = lastTimestamp;
               }
-              this._routeMessage(def.globalMsgNum, obj, records);
+              this._route(def.globalMsgNum, obj, records);
             }
           }
         }
@@ -378,18 +381,12 @@
         };
       }
 
-      _routeMessage(globalMsgNum, obj, records){
-        if (globalMsgNum === 20) { // record
-          records.push(obj);
-        } else if (globalMsgNum === 206) { // field_description
-          this.fieldDescObjs.push(obj);
-        } else if (globalMsgNum === 0) { // file_id
-          this.fileIds.push(obj);
-        } else if (globalMsgNum === 23) { // device_info
-          this.deviceInfos.push(obj);
-        } else if (globalMsgNum === 49) { // file_creator
-          this.fileCreators.push(obj);
-        }
+      _route(globalMsgNum, obj, records){
+        if (globalMsgNum === 20) records.push(obj);
+        else if (globalMsgNum === 206) this.fieldDescObjs.push(obj);
+        else if (globalMsgNum === 0) this.fileIds.push(obj);           // file_id
+        else if (globalMsgNum === 23) this.deviceInfos.push(obj);      // device_info
+        else if (globalMsgNum === 49) this.fileCreators.push(obj);     // file_creator
       }
 
       _decodeData(view, offset, def, isCompressed, compressedTs) {
@@ -398,27 +395,19 @@
         for (const fld of def.fields) {
           const baseId = fld.baseTypeId;
           const size = fld.size;
-          if (isCompressed && fld.num === 253) {
-            obj.timestamp = compressedTs;
-            continue;
-          }
+          if (isCompressed && fld.num === 253) { obj.timestamp = compressedTs; continue; }
           const value = this._readValue(view, pos, baseId, size, def.little);
           pos += size;
-
-          if (fld.num === 253) {
-            if (typeof value === 'number') obj.timestamp = value;
-          } else {
-            obj.fields[fld.num] = value;
-          }
+          if (fld.num === 253) { if (typeof value === 'number') obj.timestamp = value; }
+          else obj.fields[fld.num] = value;
         }
         if (def.devFields && def.devFields.length) {
           for (const df of def.devFields) {
-            const key = df.devIndex + ':' + df.num; // "developerIndex:fieldNum"
+            const key = df.devIndex + ':' + df.num;
             const value = this._readDevValue(view, pos, df.size, def.little);
             pos += df.size;
             obj.dev[key] = value;
             this._devKeysUsed.add(key);
-            if (!this.devFieldSizes.has(key)) this.devFieldSizes.set(key, df.size);
           }
         }
         return { obj, bytesConsumed: pos - offset };
@@ -432,35 +421,26 @@
             if (zero < 0) zero = bytes.length;
             return textDecoder.decode(bytes.subarray(0, zero));
           }
-          case 0: // enum
-          case 2: // uint8
-          case 10: // uint8z
-            return view.getUint8(pos);
-          case 1: return view.getInt8(pos); // sint8
-          case 3: return view.getInt16(pos, little); // sint16
-          case 4:
-          case 11: return view.getUint16(pos, little); // uint16/uint16z
-          case 5: return view.getInt32(pos, little); // sint32
-          case 6:
-          case 12: return view.getUint32(pos, little); // uint32/uint32z
-          case 8: return view.getFloat32(pos, little); // float32
-          case 9: return view.getFloat64(pos, little); // float64
-          case 13: return view.getUint8(pos); // byte
+          case 0: case 2: case 10: return view.getUint8(pos);          // enum/uint8/uint8z
+          case 1: return view.getInt8(pos);                             // sint8
+          case 3: return view.getInt16(pos, little);                    // sint16
+          case 4: case 11: return view.getUint16(pos, little);          // uint16/uint16z
+          case 5: return view.getInt32(pos, little);                    // sint32
+          case 6: case 12: return view.getUint32(pos, little);          // uint32/uint32z
+          case 8: return view.getFloat32(pos, little);
+          case 9: return view.getFloat64(pos, little);
+          case 13: return view.getUint8(pos);
           case 14: { // sint64
             if (view.getBigInt64) return Number(view.getBigInt64(pos, little));
-            const lo = view.getUint32(pos, little);
-            const hi = view.getInt32(pos+4, little);
+            const lo = view.getUint32(pos, little), hi = view.getInt32(pos+4, little);
             return hi * 4294967296 + lo;
           }
-          case 15:
-          case 16: { // uint64/uint64z
+          case 15: case 16: { // uint64/uint64z
             if (view.getBigUint64) return Number(view.getBigUint64(pos, little));
-            const lo = view.getUint32(pos, little);
-            const hi = view.getUint32(pos+4, little);
+            const lo = view.getUint32(pos, little), hi = view.getUint32(pos+4, little);
             return hi * 4294967296 + lo;
           }
-          default:
-            return view.getUint8(pos);
+          default: return view.getUint8(pos);
         }
       }
 
@@ -469,98 +449,86 @@
           const f = view.getFloat32(pos, little);
           if (Number.isFinite(f) && Math.abs(f) < 1e12) return f;
           return view.getInt32(pos, little);
-        } else if (size === 2) {
-          return view.getInt16(pos, little);
-        } else if (size === 1) {
-          return view.getUint8(pos);
-        } else if (size === 8) {
+        } else if (size === 2) return view.getInt16(pos, little);
+        else if (size === 1) return view.getUint8(pos);
+        else if (size === 8) {
           const d = view.getFloat64(pos, little);
           if (Number.isFinite(d)) return d;
           if (view.getBigInt64) return Number(view.getBigInt64(pos, little));
-          const lo = view.getUint32(pos, little);
-          const hi = view.getUint32(pos+4, little);
+          const lo = view.getUint32(pos, little), hi = view.getUint32(pos+4, little);
           return hi * 4294967296 + lo;
-        } else {
-          return view.getUint8(pos);
-        }
+        } else return view.getUint8(pos);
       }
 
       _mapFieldDescriptions() {
         const candidates = Array.from(this._devKeysUsed);
         if (candidates.length === 0) return;
-
-        const pairSet = new Set(candidates.map(k => k)); // "devIdx:fieldNum"
-
+        const set = new Set(candidates);
         for (const obj of this.fieldDescObjs) {
-          const nums1b = [];
-          const strings = [];
+          const nums1b=[], strings=[];
           for (const v of Object.values(obj.fields)) {
-            if (typeof v === 'number' && Number.isInteger(v) && v >=0 && v<=255) nums1b.push(v);
+            if (typeof v === 'number' && Number.isInteger(v) && v>=0 && v<=255) nums1b.push(v);
             else if (typeof v === 'string' && v.length) strings.push(v.trim());
           }
-          let matchedKey = null;
-          for (let i=0;i<nums1b.length;i++) {
-            for (let j=0;j<nums1b.length;j++) {
+          let matchedKey=null;
+          for (let i=0;i<nums1b.length;i++){
+            for (let j=0;j<nums1b.length;j++){
               if (i===j) continue;
-              const key = nums1b[i] + ':' + nums1b[j];
-              if (pairSet.has(key)) { matchedKey = key; break; }
+              const key = nums1b[i]+':'+nums1b[j];
+              if (set.has(key)){ matchedKey=key; break; }
             }
             if (matchedKey) break;
           }
-          if (matchedKey) {
-            let name = '', units = '';
-            if (strings.length === 1) {
-              const s = strings[0];
-              if (/^([cC]|degC|°C|Celsius|K|F|bpm|min\/km|km|m\/s|spm)$/i.test(s)) { units = s; }
-              else name = s;
-            } else if (strings.length >= 2) {
+          if (matchedKey){
+            let name='', units='';
+            if (strings.length===1){
+              const s=strings[0];
+              if (/^([cC]|degC|°C|Celsius|K|F|bpm|min\/km|km|m\/s|spm)$/i.test(s)) units=s; else name=s;
+            } else if (strings.length>=2){
               strings.sort((a,b)=>a.length-b.length);
-              units = strings[0];
-              name = strings[strings.length-1];
+              units=strings[0]; name=strings[strings.length-1];
             }
-            const existing = this.devFieldDescriptions.get(matchedKey) || {};
-            if (name) existing.name = name;
-            if (units) existing.units = units;
-            this.devFieldDescriptions.set(matchedKey, existing);
+            const ex=this.devFieldDescriptions.get(matchedKey)||{};
+            if (name) ex.name=name;
+            if (units) ex.units=units;
+            this.devFieldDescriptions.set(matchedKey, ex);
           }
         }
       }
     }
 
-    // Simple responsive dual-axis line chart with drag-to-select
+    // Chart with touch-friendly zoom mode toggle
     class LineChart {
       constructor(canvas) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
-        this.series = []; // [{id, name, color, axis: 'left'|'right', visible, points:[{x,y}], fmt?:fn }]
+        this.series = []; // {id,name,color,axis:'left'|'right',visible,points:[{x,y}],fmt?}
         this.dpr = Math.max(1, window.devicePixelRatio || 1);
-        this.margins = {top:10, right:55, bottom:26, left:50};
+        this.margins = {top:10, right:60, bottom:26, left:50};
         this.tooltip = {active:false, x:0, nearest:[]};
 
-        // Drag-select
+        // Selection
+        this.zoomMode = false;           // new: when true, drag to select
         this.dragging = false;
         this.selStartPx = 0;
         this.selEndPx = 0;
+        this.crosshairDragging = false;  // drag to move crosshair when zoomMode = false
         this.onSelectRange = null;
 
-        // Safe default ranges
+        // Ranges
         this.xRange = [0, 1];
-        this.yLeft = [50, 180];
-        this.yRight = [20, 40];
+        this.yLeft = [20, 40];
+        this.yRight = [50, 180];
 
         this._bind();
         this.resize();
       }
+      setZoomMode(on){ this.zoomMode = !!on; }
       _ensureRanges(){
-        if (!Array.isArray(this.xRange) || this.xRange.length!==2 || !isFinite(this.xRange[0]) || !isFinite(this.xRange[1])) {
-          this.xRange = [0, 1];
-        }
-        if (!Array.isArray(this.yLeft) || this.yLeft.length!==2 || !isFinite(this.yLeft[0]) || !isFinite(this.yLeft[1])) {
-          this.yLeft = [50, 180];
-        }
-        if (!Array.isArray(this.yRight) || this.yRight.length!==2 || !isFinite(this.yRight[0]) || !isFinite(this.yRight[1])) {
-          this.yRight = [20, 40];
-        }
+        const ok = a => Array.isArray(a) && a.length===2 && isFinite(a[0]) && isFinite(a[1]) && a[1]>a[0];
+        if (!ok(this.xRange)) this.xRange=[0,1];
+        if (!ok(this.yLeft)) this.yLeft=[20,40];
+        if (!ok(this.yRight)) this.yRight=[50,180];
       }
       setSeries(series){ this.series = series || []; this._computeRanges(); this.draw(); }
       resize(){
@@ -573,51 +541,69 @@
         this.draw();
       }
       _bind(){
-        window.addEventListener('resize', () => this.resize());
+        window.addEventListener('resize', () => this.resize(), {passive:true});
 
         this.canvas.addEventListener('pointerdown', (e)=>{
-          e.preventDefault();
           const x = this._clientToCanvasX(e.clientX);
-          this.dragging = true;
-          this.selStartPx = x;
-          this.selEndPx = x;
-          // hide tooltip while dragging
-          this.tooltip.active = false;
-          this.draw();
-        });
-        this.canvas.addEventListener('pointermove', (e)=>{
-          if (this.dragging) {
+          if (this.zoomMode) {
             e.preventDefault();
-            this.selEndPx = this._clientToCanvasX(e.clientX);
+            this.dragging = true;
+            this.selStartPx = x;
+            this.selEndPx = x;
+            this.tooltip.active = false;
+            this.canvas.setPointerCapture(e.pointerId);
             this.draw();
           } else {
-            this._onPointer(e);
-          }
-        });
-        const endDrag = (e)=>{
-          if (!this.dragging) return;
-          e.preventDefault();
-          this.dragging = false;
-          const w = Math.abs(this.selEndPx - this.selStartPx);
-          if (w > 6) {
-            // compute data range and notify
-            const x1 = this._pixToDataX(Math.min(this.selStartPx, this.selEndPx));
-            const x2 = this._pixToDataX(Math.max(this.selStartPx, this.selEndPx));
-            if (this.onSelectRange) this.onSelectRange([x1, x2]);
-          } else {
-            // treat as tap -> show tooltip
+            // inspect values
+            e.preventDefault();
+            this.crosshairDragging = true;
             this.tooltip.active = true;
-            this.tooltip.x = this._clientToCanvasX(e.clientX);
+            this.tooltip.x = x;
+            this._updateTooltipNearest();
+            this.canvas.setPointerCapture(e.pointerId);
+            this.draw();
+          }
+        }, {passive:false});
+
+        this.canvas.addEventListener('pointermove', (e)=>{
+          const x = this._clientToCanvasX(e.clientX);
+          if (this.dragging) {
+            e.preventDefault();
+            this.selEndPx = x;
+            this.draw();
+          } else if (this.crosshairDragging || e.pointerType === 'mouse') {
+            // Update crosshair live on mouse move or while touch-dragging the crosshair
+            e.preventDefault();
+            this.tooltip.active = true;
+            this.tooltip.x = x;
             this._updateTooltipNearest();
             this.draw();
           }
+        }, {passive:false});
+
+        const endDrag = (e)=>{
+          if (this.dragging) {
+            e.preventDefault();
+            this.dragging = false;
+            const w = Math.abs(this.selEndPx - this.selStartPx);
+            if (w > 6) {
+              const x1 = this._pixToDataX(Math.min(this.selStartPx, this.selEndPx));
+              const x2 = this._pixToDataX(Math.max(this.selStartPx, this.selEndPx));
+              if (this.onSelectRange) this.onSelectRange([x1, x2]);
+            }
+          }
+          if (this.crosshairDragging) {
+            e.preventDefault();
+            this.crosshairDragging = false;
+          }
+          try { this.canvas.releasePointerCapture(e.pointerId); } catch {}
         };
-        this.canvas.addEventListener('pointerup', endDrag);
-        this.canvas.addEventListener('pointercancel', endDrag);
+        this.canvas.addEventListener('pointerup', endDrag, {passive:false});
+        this.canvas.addEventListener('pointercancel', endDrag, {passive:false});
         this.canvas.addEventListener('pointerleave', (e)=>{
-          if (this.dragging) endDrag(e);
+          if (this.dragging || this.crosshairDragging) endDrag(e);
           else { this.tooltip.active=false; this.draw(); }
-        });
+        }, {passive:false});
       }
       _clientToCanvasX(clientX){
         const rect = this.canvas.getBoundingClientRect();
@@ -629,13 +615,12 @@
       }
       _pixToDataX(px){
         const [xMin,xMax]=this.xRange;
-        const W = this.canvas.clientWidth || (this.canvas.width/this.dpr);
         const plotW = this._plotWidth();
         const rel = clamp((px - this.margins.left)/plotW, 0, 1);
         return xMin + rel * (xMax - xMin);
       }
       _computeRanges(){
-        // X: from visible series
+        // X range from visible series
         let xMin=Infinity, xMax=-Infinity;
         for (const s of this.series) if (s && s.visible && s.points && s.points.length) {
           xMin = Math.min(xMin, s.points[0].x);
@@ -644,25 +629,29 @@
         if (!isFinite(xMin) || !isFinite(xMax) || xMin===xMax) { xMin=0; xMax=1; }
         this.xRange = [xMin, xMax];
 
-        // Y per axis
-        let lmin=Infinity, lmax=-Infinity, rmin=Infinity, rmax=-Infinity;
-        for (const s of this.series) if (s && s.visible && s.points && s.points.length){
-          for (const p of s.points){
-            if (!Number.isFinite(p.y)) continue;
-            if (s.axis==='left'){ lmin=Math.min(lmin,p.y); lmax=Math.max(lmax,p.y); }
-            else { rmin=Math.min(rmin,p.y); rmax=Math.max(rmax,p.y); }
-          }
+        // Left axis (temps): start at floor of min temp in view
+        let lmin=Infinity, lmax=-Infinity;
+        for (const s of this.series) if (s && s.visible && s.axis==='left' && s.points && s.points.length){
+          for (const p of s.points){ if (Number.isFinite(p.y)) { lmin=Math.min(lmin,p.y); lmax=Math.max(lmax,p.y); } }
         }
-        if (!isFinite(lmin) || !isFinite(lmax) || lmin===lmax) { lmin=50; lmax=180; }
-        if (!isFinite(rmin) || !isFinite(rmax) || rmin===rmax) { rmin=20; rmax=40; }
+        if (!isFinite(lmin) || !isFinite(lmax)) { lmin=20; lmax=40; }
+        const lstart = Math.floor(lmin);
+        let lend = lmax;
+        if (lend <= lstart) lend = lstart + 1; // ensure span
+        // small top padding (only at top, not at bottom per requirement)
+        const spanL = Math.max(1e-6, lend - lstart);
+        lend = lend + spanL*0.05;
+        this.yLeft = [lstart, lend];
 
-        const pad = (min,max)=> {
-          const span = Math.max(1e-9, max-min);
-          const p = span * 0.08;
-          return [min-p, max+p];
-        };
-        this.yLeft = pad(lmin, lmax);
-        this.yRight = pad(rmin, rmax);
+        // Right axis: auto based on visible right-axis series
+        let rmin=Infinity, rmax=-Infinity;
+        for (const s of this.series) if (s && s.visible && s.axis==='right' && s.points && s.points.length){
+          for (const p of s.points){ if (Number.isFinite(p.y)) { rmin=Math.min(rmin,p.y); rmax=Math.max(rmax,p.y); } }
+        }
+        if (!isFinite(rmin) || !isFinite(rmax) || rmin===rmax) { rmin=50; rmax=180; }
+        const spanR = Math.max(1e-6, rmax - rmin);
+        const padR = spanR*0.08;
+        this.yRight = [rmin - padR, rmax + padR];
       }
       _sx(x){
         const [xMin,xMax]=this.xRange;
@@ -692,7 +681,7 @@
         ctx.setTransform(this.dpr,0,0,this.dpr,0,0);
 
         // Grid
-        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--grid') || '#2a2f37';
+        ctx.strokeStyle = getVar('--grid','#2a2f37');
         ctx.lineWidth = 1;
 
         // X ticks
@@ -706,7 +695,7 @@
         }
         ctx.stroke();
 
-        // Left Y ticks
+        // Left Y ticks (temps)
         const lTicks = niceTicks(this.yLeft[0], this.yLeft[1], 5);
         ctx.beginPath();
         for (const yv of lTicks) {
@@ -718,7 +707,7 @@
 
         // Labels
         ctx.fillStyle = '#9aa4b2';
-        ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
+        ctx.font = '12px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
         for (const tv of xTicks) {
@@ -730,8 +719,9 @@
         ctx.textBaseline = 'middle';
         for (const yv of lTicks) {
           const y = this._syLeft(yv);
-          ctx.fillText(Math.round(yv), this.margins.left - 6, y);
+          ctx.fillText((Math.round(yv*10)/10).toFixed(1), this.margins.left - 6, y);
         }
+
         // Right Y ticks
         const rTicks = niceTicks(this.yRight[0], this.yRight[1], 5);
         ctx.textAlign = 'left';
@@ -740,13 +730,13 @@
           ctx.fillText((Math.round(yv*10)/10).toFixed(1), W - this.margins.right + 6, y);
         }
 
-        // Clip area
+        // Plot clip
         ctx.save();
         ctx.beginPath();
         ctx.rect(this.margins.left, this.margins.top, W - this.margins.left - this.margins.right, H - this.margins.top - this.margins.bottom);
         ctx.clip();
 
-        // Series
+        // Draw series
         for (const s of this.series) {
           if (!s || !s.visible || !s.points || s.points.length===0) continue;
           ctx.strokeStyle = s.color;
@@ -768,14 +758,11 @@
 
         // Selection rectangle
         if (this.dragging) {
-          const x1 = this.selStartPx;
-          const x2 = this.selEndPx;
-          const left = Math.min(x1,x2);
-          const right = Math.max(x1,x2);
-          const top = this.margins.top;
-          const bottom = H - this.margins.bottom;
-          ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--select') || '#4fc3f733';
-          ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--select-border') || '#4fc3f7aa';
+          const x1 = this.selStartPx, x2 = this.selEndPx;
+          const left = Math.min(x1,x2), right = Math.max(x1,x2);
+          const top = this.margins.top, bottom = H - this.margins.bottom;
+          ctx.fillStyle = getVar('--select','#4fc3f733');
+          ctx.strokeStyle = getVar('--select-border','#4fc3f7aa');
           ctx.lineWidth = 1;
           ctx.beginPath(); ctx.rect(left, top, right-left, bottom-top); ctx.fill(); ctx.stroke();
         }
@@ -798,7 +785,7 @@
             for (const item of info) if (item.id === 'time') tStr = item.text;
             if (tStr) lines.push(tStr);
             for (const item of info) if (item.id!=='time') lines.push(item.text);
-            ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
+            ctx.font = '12px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial';
             const widths = lines.map(s=>ctx.measureText(s).width);
             const bw = (widths.length ? Math.max(...widths) : 0) + pad*2;
             const bh = lines.length*16 + pad*2;
@@ -820,20 +807,10 @@
         ctx.restore(); // clip
         ctx.restore();
       }
-      _onPointer(e){
-        const rect = this.canvas.getBoundingClientRect();
-        const xPix = (e.clientX - rect.left);
-        this.tooltip.active = true;
-        this.tooltip.x = xPix;
-        this._updateTooltipNearest();
-        this.draw();
-      }
       _updateTooltipNearest(){
         const [xMin,xMax] = this.xRange;
-        const W = this.canvas.clientWidth || (this.canvas.width/this.dpr);
-        const plotW = Math.max(1, (W - this.margins.left - this.margins.right));
+        const plotW = this._plotWidth();
         const x = xMin + ( (this.tooltip.x - this.margins.left) / plotW ) * (xMax - xMin);
-
         const nearest = [];
         nearest.push({id:'time', text:'t = ' + fmtHMS(clamp(x, xMin, xMax))});
         for (const s of this.series) {
@@ -871,6 +848,7 @@
     const messageEl = document.getElementById('message');
     const statsEl = document.getElementById('stats');
     const resetBtn = document.getElementById('resetBtn');
+    const zoomModeBtn = document.getElementById('zoomModeBtn');
     const zoomClearBtn = document.getElementById('zoomClearBtn');
     const mapBtn = document.getElementById('mapBtn');
     const smoothSlider = document.getElementById('smoothSlider');
@@ -902,7 +880,6 @@
       deviceInfos: [],
       fileCreators: [],
 
-      // base time (FIT epoch) not strictly needed for elapsed axis
       baseTime: 0,
 
       // raw (unsmoothed)
@@ -910,8 +887,8 @@
       coreRaw: [],
       skinRaw: [],
       hsiRaw:  [],
-      distRaw: [],
-      paceRaw: [],
+      distRaw: [],  // km (display units)
+      paceRaw: [],  // min/km
       cadRaw:  [],
 
       // displayed (smoothed)
@@ -923,18 +900,16 @@
       paceSeries: [],
       cadSeries:  [],
 
-      // dev field mapping for temps
       coreKey: null,
       skinKey: null,
       coreScale: 1,
       skinScale: 1,
 
-      // smoothing
       tauSec: 0,
+      cutoffX: 0,
+      selection: null,
 
-      // show range
-      cutoffX: 0,          // first elapsed where core > 0
-      selection: null      // [x1,x2] selected by drag
+      zoomMode: false
     };
 
     // Smoothing UI
@@ -954,26 +929,14 @@
       updateStatsUI();
     });
 
-    // Reset
-    resetBtn.addEventListener('click', ()=>{
-      fileInput.value = '';
-      messageEl.textContent = 'Load a .FIT file. Drag on the chart to zoom a time range. All parsing and rendering happen locally in your browser.';
-      statsEl.textContent = '';
-      mapBtn.disabled = true;
-      zoomClearBtn.disabled = true;
-      deviceNameEl.textContent = '';
-      resetBtn.disabled = true;
-      current = {
-        records: [], devDesc: new Map(), fileIds: [], deviceInfos: [], fileCreators: [],
-        baseTime: 0,
-        hrRaw: [], coreRaw: [], skinRaw: [], hsiRaw: [], distRaw: [], paceRaw: [], cadRaw: [],
-        hrSeries: [], coreSeries: [], skinSeries: [], hsiSeries: [], distSeries: [], paceSeries: [], cadSeries: [],
-        coreKey: null, skinKey: null, coreScale: 1, skinScale: 1,
-        tauSec: 0, cutoffX: 0, selection: null
-      };
-      smoothSlider.value = "0";
-      setSmoothingUI(0);
-      chart.setSeries([]);
+    // Zoom mode toggle
+    zoomModeBtn.addEventListener('click', ()=>{
+      current.zoomMode = !current.zoomMode;
+      chart.setZoomMode(current.zoomMode);
+      zoomModeBtn.textContent = current.zoomMode ? 'Zoom: On' : 'Zoom: Off';
+      messageEl.textContent = current.zoomMode
+        ? 'Zoom mode is ON. Drag to select a time range. Use “Clear Zoom” to reset.'
+        : 'Zoom mode is OFF. Slide your finger across the graph to inspect values.';
     });
 
     // Clear Zoom
@@ -984,8 +947,33 @@
       updateStatsUI();
     });
 
+    // Reset
+    resetBtn.addEventListener('click', ()=>{
+      fileInput.value = '';
+      messageEl.textContent = 'Load a .FIT file. Zoom mode is OFF by default so you can slide across the graph to see values. Turn Zoom mode ON to drag-select a time range. All parsing and rendering happen locally.';
+      statsEl.textContent = '';
+      deviceNameEl.textContent = '';
+      mapBtn.disabled = true;
+      zoomClearBtn.disabled = true;
+      zoomModeBtn.disabled = true;
+      resetBtn.disabled = true;
+      current = {
+        records: [], devDesc: new Map(), fileIds: [], deviceInfos: [], fileCreators: [],
+        baseTime: 0,
+        hrRaw: [], coreRaw: [], skinRaw: [], hsiRaw: [], distRaw: [], paceRaw: [], cadRaw: [],
+        hrSeries: [], coreSeries: [], skinSeries: [], hsiSeries: [], distSeries: [], paceSeries: [], cadSeries: [],
+        coreKey: null, skinKey: null, coreScale: 1, skinScale: 1,
+        tauSec: 0, cutoffX: 0, selection: null, zoomMode: false
+      };
+      chart.setZoomMode(false);
+      smoothSlider.value = "0";
+      setSmoothingUI(0);
+      chart.setSeries([]);
+    });
+
     // Chart selection callback
     chart.onSelectRange = (range)=>{
+      if (!range) return;
       const x1 = Math.max(range[0], current.cutoffX);
       const x2 = Math.max(x1, range[1]);
       current.selection = [x1, x2];
@@ -999,6 +987,7 @@
       const file = e.target.files && e.target.files[0];
       if (!file) return;
       resetBtn.disabled = false;
+      zoomModeBtn.disabled = false;
       messageEl.textContent = 'Parsing...';
       statsEl.textContent = '';
       mapBtn.disabled = true;
@@ -1015,7 +1004,7 @@
         current.deviceInfos = deviceInfos;
         current.fileCreators = fileCreators;
 
-        deviceNameEl.textContent = computeDeviceString(fileIds, deviceInfos, fileCreators);
+        deviceNameEl.textContent = computeDeviceStringFromCreator(deviceInfos, fileIds, fileCreators);
 
         if (!records.length) throw new Error('No record data found');
 
@@ -1029,33 +1018,63 @@
           messageEl.textContent = 'Warning: No timestamps found. Using sample index as elapsed time.';
         } else {
           records.forEach(r => r._elapsed = (r.timestamp - firstTs));
-          messageEl.textContent = 'Parsed successfully. Drag to select and zoom.';
+          messageEl.textContent = 'Parsed. Zoom mode OFF: slide to inspect; turn ON to drag-select.';
         }
         current.baseTime = firstTs || 0;
 
-        // Extract base fields from Record (global 20)
+        // Extract base fields (from record message 20)
         const hrRaw = [];
-        const distRaw = [];
+        const distKmRaw = []; // km displayed
         const paceRaw = [];
         const cadRaw = [];
+
+        let prevDcm = null; // distance in centimeters (assumed)
+        let prevT = null;
+
         for (const r of records) {
           const t = r._elapsed;
-          // HR (field 3)
+
+          // Heart rate (field 3)
           const hr = r.fields[3];
           if (typeof hr === 'number' && hr>0 && hr<255) hrRaw.push({x:t, y:hr});
-          // Distance meters -> km (field 5)
-          const d = r.fields[5];
-          if (typeof d === 'number' && isFinite(d)) distRaw.push({x:t, y:(d/1000)});
-          // Speed m/s -> pace min/km (field 6)
-          const s = r.fields[6];
-          const pace = (typeof s === 'number' && isFinite(s) && s > 0.2) ? (1000/s)/60 : NaN;
-          paceRaw.push({x:t, y: pace});
-          // Cadence (field 4) -> steps per minute (×2)
+
+          // Cadence (field 4) -> steps per minute (x2)
           const c = r.fields[4];
           if (typeof c === 'number' && isFinite(c)) cadRaw.push({x:t, y: c*2});
+
+          // Distance (field 5) — appears to be centimeters in your files
+          const dRaw = r.fields[5];
+          if (typeof dRaw === 'number' && isFinite(dRaw)) {
+            // Display distance in km: cm -> km = /100000
+            const dKm = dRaw / 100000;
+            distKmRaw.push({x:t, y:dKm});
+
+            // Pace from distance delta/time delta (robust)
+            if (prevDcm!=null && prevT!=null) {
+              const dd_cm = dRaw - prevDcm;
+              const dt = t - prevT;
+              if (dt > 0 && dd_cm >= 0) {
+                const dd_m = dd_cm / 100; // cm -> m
+                const speed = dd_m / dt;  // m/s
+                if (speed > 0.05) {       // ignore near-0 noise
+                  const minPerKm = (1000 / speed) / 60;
+                  paceRaw.push({x:t, y:minPerKm});
+                } else {
+                  paceRaw.push({x:t, y:NaN});
+                }
+              } else {
+                paceRaw.push({x:t, y:NaN});
+              }
+            } else {
+              paceRaw.push({x:t, y:NaN});
+            }
+            prevDcm = dRaw; prevT = t;
+          } else {
+            paceRaw.push({x:t, y:NaN});
+          }
         }
         current.hrRaw = hrRaw;
-        current.distRaw = distRaw;
+        current.distRaw = distKmRaw;
         current.paceRaw = paceRaw;
         current.cadRaw = cadRaw;
 
@@ -1064,7 +1083,6 @@
         for (const r of records) for (const k in r.dev) allDevKeys.add(k);
         const candidates = Array.from(allDevKeys);
 
-        // Choose core/skin keys
         let coreKey = null, skinKey = null;
         function descFor(k){ return devFieldDescriptions.get(k) || {}; }
         function looksLikeCore(d){ return d && d.name && /core/i.test(d.name); }
@@ -1098,10 +1116,7 @@
             const ys = arr.map(p=>p.y).filter(Number.isFinite).slice().sort((a,b)=>a-b);
             const mid = ys[Math.floor(ys.length/2)];
             let score = -Math.abs(mid-37); let scale=1;
-            if (mid>60){ // maybe centi-deg
-              const m2 = mid/100; const s2 = -Math.abs(m2-37);
-              if (s2 > score) { score = s2; scale = 0.01; }
-            }
+            if (mid>60){ const m2 = mid/100; const s2 = -Math.abs(m2-37); if (s2 > score) { score = s2; scale = 0.01; } }
             const d = descFor(k);
             if (unitsC(d)) score += 2;
             if (looksLikeCore(d) || looksLikeSkin(d)) score += 1;
@@ -1127,7 +1142,7 @@
         let coreRaw = scaledSeries(coreKey, current.coreScale);
         let skinRaw = scaledSeries(skinKey, current.skinScale);
 
-        // Adjust scale heuristics
+        // Adjust scale heuristics if needed
         function adjustIfNeeded(series){
           if (!series.length) return {series, scale:1};
           const ys = series.map(p=>p.y).sort((a,b)=>a-b);
@@ -1144,17 +1159,14 @@
         current.coreRaw = coreRaw;
         current.skinRaw = skinRaw;
 
-        // Detect Heat Strain Index developer field (heuristic)
+        // Detect Heat Strain Index (developer field name contains 'heat'+'strain' or 'hsi')
         const hsiKey = detectHSIKey(devFieldDescriptions);
+        current.hsiRaw = [];
         if (hsiKey) {
-          const hsiRaw = [];
           for (const r of records) {
             const v = r.dev[hsiKey];
-            if (typeof v === 'number' && isFinite(v)) hsiRaw.push({x:r._elapsed, y:v});
+            if (typeof v === 'number' && isFinite(v)) current.hsiRaw.push({x:r._elapsed, y:v});
           }
-          current.hsiRaw = hsiRaw;
-        } else {
-          current.hsiRaw = [];
         }
 
         // Smoothing
@@ -1173,7 +1185,7 @@
 
         // Messages and mapping button
         const parts = [];
-        parts.push('Parsed ' + (records.length) + ' records. Drag on the chart to select and zoom.');
+        parts.push('Parsed ' + (records.length) + ' records. Zoom OFF: slide to inspect; Zoom ON: drag-select.');
         if (!current.hrRaw.length) parts.push('No heart rate found.');
         if (!current.coreRaw.length) parts.push('Core temp not auto-detected. Use “Map Fields”.');
         if (!current.skinRaw.length) parts.push('Skin temp not auto-detected. Use “Map Fields”.');
@@ -1197,7 +1209,7 @@
       return null;
     }
 
-    // Zero-phase exponential smoothing (forward + backward EMA), time-aware, NaN tolerant
+    // Zero-phase exponential smoothing (forward + backward EMA), time-aware, NaN-tolerant
     function smoothZeroPhase(points, tauSec){
       if (!points || points.length === 0 || !isFinite(tauSec) || tauSec <= 0) return (points||[]).slice();
 
@@ -1252,7 +1264,7 @@
       current.cutoffX = cut;
     }
 
-    // Filter to visible x-range (cutoff + selection)
+    // Visible window filter (cutoff + selection)
     function inView(x){
       if (x < current.cutoffX) return false;
       if (current.selection) {
@@ -1264,20 +1276,18 @@
 
     function renderChart(){
       const series = [
-        { id:'hr',   name:'Heart Rate', color:getVar('--hr','#e53935'),   axis:'left',  visible: toggles.hr.checked,   points: filterPoints(current.hrSeries),   fmt:(v)=> `${Math.round(v)} bpm` },
-        { id:'core', name:'Core Temp',  color:getVar('--core','#1e88e5'), axis:'right', visible: toggles.core.checked, points: filterPoints(current.coreSeries), fmt:(v)=> `${(Math.round(v*100)/100).toFixed(2)} °C` },
-        { id:'skin', name:'Skin Temp',  color:getVar('--skin','#fb8c00'), axis:'right', visible: toggles.skin.checked, points: filterPoints(current.skinSeries), fmt:(v)=> `${(Math.round(v*100)/100).toFixed(2)} °C` },
+        // Primary axis (left): temps
+        { id:'core', name:'Core Temp',  color:getVar('--core','#1e88e5'), axis:'left',  visible: toggles.core.checked, points: filterPoints(current.coreSeries), fmt:(v)=> `${(Math.round(v*100)/100).toFixed(2)} °C` },
+        { id:'skin', name:'Skin Temp',  color:getVar('--skin','#fb8c00'), axis:'left',  visible: toggles.skin.checked, points: filterPoints(current.skinSeries), fmt:(v)=> `${(Math.round(v*100)/100).toFixed(2)} °C` },
+
+        // Secondary axis (right): everything else
+        { id:'hr',   name:'Heart Rate', color:getVar('--hr','#e53935'),   axis:'right', visible: toggles.hr.checked,   points: filterPoints(current.hrSeries),   fmt:(v)=> `${Math.round(v)} bpm` },
         { id:'hsi',  name:'HSI',        color:getVar('--hsi','#ab47bc'),  axis:'right', visible: toggles.hsi.checked,  points: filterPoints(current.hsiSeries),  fmt:(v)=> Number.isFinite(v)? (Math.round(v*100)/100).toFixed(2):'—' },
         { id:'dist', name:'Distance',   color:getVar('--dist','#66bb6a'), axis:'right', visible: toggles.dist.checked, points: filterPoints(current.distSeries), fmt:(v)=> Number.isFinite(v)? (Math.round(v*100)/100).toFixed(2)+' km':'—' },
         { id:'pace', name:'Pace',       color:getVar('--pace','#26c6da'), axis:'right', visible: toggles.pace.checked, points: filterPoints(current.paceSeries), fmt:(v)=> fmtPace(v) },
-        { id:'cad',  name:'Cadence',    color:getVar('--cad','#ffd54f'),  axis:'left',  visible: toggles.cad.checked,  points: filterPoints(current.cadSeries),  fmt:(v)=> Number.isFinite(v)? Math.round(v)+' spm':'—' },
+        { id:'cad',  name:'Cadence',    color:getVar('--cad','#ffd54f'),  axis:'right', visible: toggles.cad.checked,  points: filterPoints(current.cadSeries),  fmt:(v)=> Number.isFinite(v)? Math.round(v)+' spm':'—' },
       ];
       chart.setSeries(series);
-    }
-
-    function getVar(name, fallback){
-      const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-      return v || fallback;
     }
 
     function arrayMaxInView(arr){
@@ -1291,26 +1301,17 @@
     }
 
     function updateStatsUI(){
-      const duration = (current.records.length && Number.isFinite(current.records[current.records.length-1]._elapsed))
-        ? current.records[current.records.length-1]._elapsed
-        : 0;
-
       const hrMax   = arrayMaxInView(current.hrRaw);
       const coreMax = arrayMaxInView(current.coreRaw);
       const skinMax = arrayMaxInView(current.skinRaw);
 
-      const hrMaxStr = (hrMax!=null) ? Math.round(hrMax) + ' bpm' : '—';
-      const coreMaxStr = (coreMax!=null) ? (Math.round(coreMax*100)/100).toFixed(2) + ' °C' : '—';
-      const skinMaxStr = (skinMax!=null) ? (Math.round(skinMax*100)/100).toFixed(2) + ' °C' : '—';
-
       const parts = [
-        `<span>Max Core: <span class="kbd">${coreMaxStr}</span></span>`,
-        `<span>Max Skin: <span class="kbd">${skinMaxStr}</span></span>`,
-        `<span>Max HR: <span class="kbd">${hrMaxStr}</span></span>`,
-        `<span>Elapsed: <span class="kbd">${fmtHMS(viewDuration())}</span></span>`
+        `<span>Max Core: <span class="kbd">${coreMax!=null ? (Math.round(coreMax*100)/100).toFixed(2)+' °C' : '—'}</span></span>`,
+        `<span>Max Skin: <span class="kbd">${skinMax!=null ? (Math.round(skinMax*100)/100).toFixed(2)+' °C' : '—'}</span></span>`,
+        `<span>Max HR: <span class="kbd">${hrMax!=null ? Math.round(hrMax)+' bpm' : '—'}</span></span>`,
+        `<span>Window: <span class="kbd">${fmtHMS(viewDuration())}</span></span>`
       ];
 
-      // Extra fields maxima only if toggled on
       if (toggles.hsi.checked) {
         const h = arrayMaxInView(current.hsiRaw);
         parts.push(`<span>Max HSI: <span class="kbd">${h!=null ? (Math.round(h*100)/100).toFixed(2) : '—'}</span></span>`);
@@ -1332,7 +1333,6 @@
     }
 
     function viewDuration(){
-      // Duration of the visible window (from cutoff and optional selection)
       let start = current.cutoffX;
       let end = (current.records.length ? current.records[current.records.length-1]._elapsed : 0);
       if (current.selection) { start = Math.max(start, current.selection[0]); end = Math.min(end, current.selection[1]); }
@@ -1400,7 +1400,6 @@
 
       recalcSmoothing();
       updateCutoff();
-      // Keep current selection but ensure it's within new data
       renderChart();
       updateStatsUI();
 
@@ -1420,10 +1419,7 @@
     }
 
     function niceDevLabel(key, desc, records){
-      const sample = (() => {
-        for (const r of records) if (typeof r.dev[key] === 'number' && isFinite(r.dev[key])) return r.dev[key];
-        return null;
-      })();
+      const sample = (() => { for (const r of records) if (typeof r.dev[key] === 'number' && isFinite(r.dev[key])) return r.dev[key]; return null; })();
       const name = desc?.name ? desc.name : 'Field ' + key;
       const units = desc?.units ? ' ' + desc.units : '';
       const val = (sample!=null) ? ` [ex: ${Math.round(sample*100)/100}]` : '';
@@ -1442,47 +1438,50 @@
       return html;
     }
 
-    // Device string
-    function computeDeviceString(fileIds, deviceInfos, fileCreators){
-      // Prefer file_id for brand/product/serial, file_creator (or device_info) for SW
-      let manuf = null, product = null, serial = null;
-      if (fileIds && fileIds.length) {
-        const f = fileIds[0].fields || {};
-        manuf = f[1];
-        product = f[2];
-        serial = f[3];
+    // Device string: use Device Info with device_index = creator (assumed value 0). Fallbacks if missing.
+    function computeDeviceStringFromCreator(deviceInfos, fileIds, fileCreators){
+      // Find device_info with device_index == 0 (creator)
+      let picked = null;
+      for (const d of deviceInfos||[]) {
+        const f = d.fields||{};
+        if (f[0]===0) { picked = d; break; } // device_index field number 0
       }
-      let productName = null, sw = null;
-      if (deviceInfos && deviceInfos.length) {
-        for (const d of deviceInfos) {
-          const f = d.fields || {};
-          if (!productName && typeof f[27] === 'string' && f[27].length) productName = f[27];
-          if (sw==null && (typeof f[5] === 'number')) sw = f[5];
-          if (serial==null && (typeof f[3] === 'number')) serial = f[3];
-          if (manuf==null && (typeof f[2] === 'number')) manuf = f[2];
-          if (product==null && (typeof f[4] === 'number')) product = f[4];
-        }
+      if (!picked && deviceInfos && deviceInfos.length) picked = deviceInfos[0];
+
+      let manuf = null, product = null, serial = null, sw = null;
+      if (picked) {
+        const f = picked.fields||{};
+        manuf = f[2];           // manufacturer
+        product = f[4];         // product
+        serial = f[3];          // serial_number
+        sw = f[5];              // software_version
       }
-      if (fileCreators && fileCreators.length && (sw==null)) {
-        const fc = fileCreators[0].fields || {};
+      // Fallbacks from file_id and file_creator
+      if ((manuf==null || product==null || serial==null) && fileIds && fileIds.length) {
+        const f = fileIds[0].fields||{};
+        if (manuf==null) manuf = f[1];
+        if (product==null) product = f[2];
+        if (serial==null) serial = f[3];
+      }
+      if (sw==null && fileCreators && fileCreators.length) {
+        const fc = fileCreators[0].fields||{};
         if (typeof fc[0] === 'number') {
           sw = fc[0];
-          // Heuristic: software_version in file_creator may be scaled by 100 (e.g., 1420 -> 14.20)
           if (sw >= 1000 && Number.isInteger(sw)) sw = sw/100;
         }
       }
+
       const brandStr = (typeof manuf === 'number' && MANUFACTURERS[manuf]) ? MANUFACTURERS[manuf] : (manuf!=null ? String(manuf) : 'Unknown');
-      const prodStr = productName || (product!=null ? String(product) : 'Unknown');
+      const prodStr = (product!=null ? String(product) : 'Unknown');
       let swStr = (sw!=null) ? String(sw) : '—';
-      if (typeof sw === 'number' && sw % 1 !== 0) {
-        swStr = (Math.round(sw*100)/100).toFixed(2);
-      }
+      if (typeof sw === 'number' && sw % 1 !== 0) swStr = (Math.round(sw*100)/100).toFixed(2);
       const serialStr = (serial!=null ? String(serial) : '—');
-      return `${brandStr} ${prodStr} ${swStr} (${serialStr})`;
+      return `${brandStr} ${prodStr} (sw version = ${swStr}, serial= ${serialStr})`;
     }
 
-    // Initialize smoothing UI
+    // Initialize smoothing UI and default chart mode
     setSmoothingUI(sliderToTau(smoothSlider.value));
+    chart.setZoomMode(false);
   </script>
 </body>
 </html>
