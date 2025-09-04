@@ -1,0 +1,1488 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>FIT Viewer: HR, Core Temp, Skin Temp</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <style>
+    :root{
+      --bg:#0f1216;
+      --panel:#171b21;
+      --text:#e5e9f0;
+      --muted:#9aa4b2;
+      --accent:#4fc3f7;
+      --hr:#e53935;
+      --core:#1e88e5;
+      --skin:#fb8c00;
+      --grid:#232a32;
+      --ok:#2e7d32;
+      --warn:#ef6c00;
+      --err:#e53935;
+
+      --hsi:#ab47bc;     /* purple */
+      --dist:#66bb6a;    /* green */
+      --pace:#26c6da;    /* teal */
+      --cad:#ffd54f;     /* yellow */
+      --select:#4fc3f733;
+      --select-border:#4fc3f7aa;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font:400 16px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji}
+    header{
+      padding:12px 14px;
+      background:var(--panel);
+      position:sticky;top:0;z-index:10;
+      border-bottom:1px solid #20262e;
+    }
+    header .title{
+      font-weight:700;font-size:16px;margin-bottom:6px;
+    }
+    .device-line{
+      color:var(--muted);
+      font-size:13px;
+      margin:2px 0 8px 0;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    header .row{
+      display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+    }
+    input[type="file"]{
+      color:var(--text);
+      background:#10141a;
+      border:1px solid #2a313b;
+      padding:8px 10px;border-radius:10px;
+      width:100%;
+      max-width:420px;
+    }
+    .btn{
+      background:#243041;border:1px solid #334255;color:var(--text);
+      padding:8px 12px;border-radius:10px;cursor:pointer;
+    }
+    .btn:disabled{opacity:0.6;cursor:not-allowed}
+    .legend{
+      display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;
+    }
+    .chip{
+      display:flex;align-items:center;gap:8px;
+      background:#11161d;border:1px solid #2a313b;border-radius:999px;padding:6px 10px;cursor:pointer;
+      user-select:none;
+    }
+    .swatch{width:14px;height:14px;border-radius:50%}
+    .chip input{display:none}
+    .chip input:checked + .label{opacity:1}
+    .chip .label{opacity:0.9}
+    .chip .unit{color:var(--muted);margin-left:4px}
+    .stats{
+      display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);
+      font-size:14px;margin-top:6px;
+    }
+    .wrap{
+      padding:10px;
+      display:flex;flex-direction:column;gap:10px;
+    }
+    .card{
+      background:var(--panel);border:1px solid #20262e;border-radius:12px;padding:10px;
+    }
+    canvas{display:block;width:100%;height:54vh;background:#0b0f14;border-radius:10px;touch-action:none}
+    .msg{
+      font-size:14px;color:var(--muted);margin-top:6px
+    }
+    .error{color:var(--err)}
+    .ok{color:var(--ok)}
+    .warn{color:var(--warn)}
+    .footer{
+      color:var(--muted);font-size:12px;text-align:center;padding:16px
+    }
+    /* Slider */
+    .slider-wrap{
+      display:flex;align-items:center;gap:10px;flex-wrap:wrap
+    }
+    .range{
+      -webkit-appearance:none;width:min(420px, 100%);height:28px;background:transparent;padding:0;margin:0
+    }
+    .range:focus{outline:none}
+    .range::-webkit-slider-runnable-track{
+      height:6px;background:#2a313b;border-radius:999px;border:0
+    }
+    .range::-webkit-slider-thumb{
+      -webkit-appearance:none;margin-top:-6px;
+      width:18px;height:18px;border-radius:50%;background:#4fc3f7;border:2px solid #1a222b
+    }
+    .range::-moz-range-track{height:6px;background:#2a313b;border:0;border-radius:999px}
+    .range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#4fc3f7;border:2px solid #1a222b}
+    .kbd{
+      font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      background:#0f141a;border:1px solid #2a313b;padding:2px 6px;border-radius:6px;color:var(--muted)
+    }
+    /* Modal mapping */
+    .modal-backdrop{
+      position:fixed;inset:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;padding:16px;z-index:100;
+    }
+    .modal{
+      width:100%;max-width:520px;background:var(--panel);border:1px solid #2a313b;border-radius:12px;padding:14px;
+    }
+    .modal h3{margin:0 0 8px 0}
+    .modal p{color:var(--muted);margin:0 0 12px 0}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .col{display:flex;flex-direction:column;gap:6px}
+    label{font-size:14px;color:var(--muted)}
+    select, input[type="number"]{
+      background:#0f141a;color:var(--text);border:1px solid #2a313b;border-radius:8px;padding:8px;min-width:140px
+    }
+    .modal .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title">FIT Viewer — Heart Rate, Core Temp, Skin Temp</div>
+    <div id="deviceName" class="device-line"></div>
+    <div class="row">
+      <input id="file" type="file" accept=".fit" />
+      <button id="resetBtn" class="btn" disabled>Reset</button>
+      <button id="zoomClearBtn" class="btn" disabled>Clear Zoom</button>
+      <button id="mapBtn" class="btn" disabled>Map Fields</button>
+    </div>
+    <div class="row slider-wrap">
+      <span id="smoothText" class="kbd">Smoothing: 0 s</span>
+      <input id="smoothSlider" class="range" type="range" min="0" max="100" step="1" value="0" />
+    </div>
+
+    <!-- Legend: base series -->
+    <div class="legend" id="legend">
+      <label class="chip"><input type="checkbox" id="toggle-hr" checked><span class="swatch" style="background:var(--hr)"></span><span class="label">Heart Rate <span class="unit">(bpm)</span></span></label>
+      <label class="chip"><input type="checkbox" id="toggle-core" checked><span class="swatch" style="background:var(--core)"></span><span class="label">Core Temp <span class="unit">(°C)</span></span></label>
+      <label class="chip"><input type="checkbox" id="toggle-skin" checked><span class="swatch" style="background:var(--skin)"></span><span class="label">Skin Temp <span class="unit">(°C)</span></span></label>
+    </div>
+    <!-- Legend: extra fields (initially off) -->
+    <div class="legend">
+      <label class="chip"><input type="checkbox" id="toggle-hsi"><span class="swatch" style="background:var(--hsi)"></span><span class="label">Heat Strain Index</span></label>
+      <label class="chip"><input type="checkbox" id="toggle-dist"><span class="swatch" style="background:var(--dist)"></span><span class="label">Distance <span class="unit">(km)</span></span></label>
+      <label class="chip"><input type="checkbox" id="toggle-pace"><span class="swatch" style="background:var(--pace)"></span><span class="label">Pace <span class="unit">(min/km)</span></span></label>
+      <label class="chip"><input type="checkbox" id="toggle-cad"><span class="swatch" style="background:var(--cad)"></span><span class="label">Cadence <span class="unit">(spm)</span></span></label>
+    </div>
+
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <div class="wrap">
+    <div class="card">
+      <canvas id="chart" aria-label="Graph of variables over elapsed time; drag to select and zoom"></canvas>
+      <div id="message" class="msg">Load a .FIT file. Drag on the chart to zoom a time range. All parsing and rendering happen locally in your browser.</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Privacy: Your file never leaves your device. If temperatures don’t appear automatically, use “Map Fields” to assign developer data fields to Core/Skin and optionally apply a scale (e.g., 0.01).
+  </div>
+
+  <!-- Modal for mapping developer fields (Core/Skin) -->
+  <div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="mapTitle">
+    <div class="modal">
+      <h3 id="mapTitle">Map Developer Fields</h3>
+      <p>Select which developer fields represent Core and Skin temperatures. Optionally set a scale (e.g., 0.01 if values are in centi-degrees).</p>
+      <div class="row">
+        <div class="col" style="flex:1 1 220px">
+          <label for="coreSelect">Core Temp Field</label>
+          <select id="coreSelect"></select>
+        </div>
+        <div class="col" style="width:120px">
+          <label for="coreScale">Core Scale</label>
+          <input id="coreScale" type="number" step="0.0001" value="1" />
+        </div>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <div class="col" style="flex:1 1 220px">
+          <label for="skinSelect">Skin Temp Field</label>
+          <select id="skinSelect"></select>
+        </div>
+        <div class="col" style="width:120px">
+          <label for="skinScale">Skin Scale</label>
+          <input id="skinScale" type="number" step="0.0001" value="1" />
+        </div>
+      </div>
+      <div class="msg" id="mapHint"></div>
+      <div class="actions">
+        <button id="cancelMap" class="btn">Cancel</button>
+        <button id="applyMap" class="btn">Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Utility helpers
+    const FIT_EPOCH_OFFSET = 631065600; // seconds difference from UNIX epoch (not required for elapsed)
+    const textDecoder = new TextDecoder('utf-8');
+    const SMOOTH_MAX_SEC = 30; // maximum smoothing strength (seconds)
+
+    function clamp(v,min,max){return Math.max(min, Math.min(max, v));}
+    function pad2(n){return n<10?'0'+n:''+n;}
+    function fmtHMS(sec){
+      sec = Math.max(0, Math.floor(sec));
+      const h = Math.floor(sec/3600);
+      const m = Math.floor((sec%3600)/60);
+      const s = sec % 60;
+      return (h>0? (h+':') : '') + pad2(m) + ':' + pad2(s);
+    }
+    function fmtS(sec){
+      if (sec >= 10) return Math.round(sec) + ' s';
+      if (sec >= 1) return (Math.round(sec*10)/10).toFixed(1) + ' s';
+      return (Math.round(sec*100)/100).toFixed(2) + ' s';
+    }
+    function fmtPace(minPerKm){
+      if (!isFinite(minPerKm) || minPerKm<=0) return '—';
+      const totalSec = minPerKm*60;
+      const m = Math.floor(totalSec/60);
+      const s = Math.round(totalSec % 60);
+      return `${m}:${pad2(s)} /km`;
+    }
+    function niceTicks(min, max, count=5){
+      if (!isFinite(min) || !isFinite(max)) return [];
+      if (min===max) return [min];
+      const span = max - min;
+      const step0 = Math.pow(10, Math.floor(Math.log10(span / count)));
+      const err = (span / count) / step0;
+      let step;
+      if (err >= 7.5) step = 10*step0;
+      else if (err >= 3.5) step = 5*step0;
+      else if (err >= 1.5) step = 2*step0;
+      else step = step0;
+      const start = Math.ceil(min/step)*step;
+      const ticks = [];
+      for (let v=start; v<=max+1e-9; v+=step) ticks.push(v);
+      if (ticks.length===0) ticks.push(min);
+      return ticks;
+    }
+
+    // Manufacturer mapping (partial, common brands)
+    const MANUFACTURERS = {
+      1:'Garmin', 13:'SRAM', 15:'Zwift', 23:'Tacx', 32:'Wahoo', 38:'Stages',
+      42:'Suunto', 70:'Hammerhead', 76:'Stages', 89:'Polar', 167:'COROS'
+    };
+
+    // FIT Parser (supports definitions, developer fields, file_id/device_info/file_creator)
+    class FitParser {
+      constructor() {
+        this._devKeysUsed = new Set();
+        this.devFieldSizes = new Map();
+        this.devFieldDescriptions = new Map(); // key "devIdx:fieldNum" -> {name, units}
+        this.fieldDescObjs = []; // raw parsed 206 messages
+        this.fileIds = [];
+        this.deviceInfos = [];
+        this.fileCreators = [];
+      }
+
+      parse(arrayBuffer) {
+        const view = new DataView(arrayBuffer);
+        let pos = 0;
+
+        // Header
+        const headerSize = view.getUint8(pos); pos+=1;
+        pos+=1; // protocol
+        pos+=2; // profile
+        const dataSize = view.getUint32(pos, true); pos+=4;
+        const sig = String.fromCharCode(view.getUint8(pos), view.getUint8(pos+1), view.getUint8(pos+2), view.getUint8(pos+3));
+        pos+=4;
+        if (headerSize === 14) pos += 2; // header CRC
+        if (sig !== '.FIT') throw new Error('Invalid FIT signature');
+
+        const dataEnd = headerSize + dataSize;
+        pos = headerSize;
+
+        const defMap = new Map(); // localMesgNum -> def
+        let lastTimestamp; // uint32 FIT epoch seconds
+        const records = [];
+
+        while (pos < dataEnd) {
+          const header = view.getUint8(pos); pos += 1;
+
+          if (header & 0x80) {
+            // Compressed timestamp header
+            const localNum = (header >> 5) & 0x03;
+            const timeOffset = header & 0x1F;
+            const def = defMap.get(localNum);
+            if (!def) throw new Error('Compressed header refers to unknown local message: ' + localNum);
+
+            let ts;
+            if (lastTimestamp === undefined) {
+              ts = 0;
+            } else {
+              ts = (lastTimestamp & ~31) + timeOffset;
+              if (ts <= lastTimestamp) ts += 32;
+            }
+            lastTimestamp = ts;
+
+            const {obj, bytesConsumed} = this._decodeData(view, pos, def, true, ts);
+            pos += bytesConsumed;
+
+            this._routeMessage(def.globalMsgNum, obj, records);
+          } else {
+            const isDefinition = (header & 0x40) !== 0;
+            const hasDeveloper = (header & 0x20) !== 0;
+            const localNum = header & 0x0F;
+
+            if (isDefinition) {
+              // Definition message
+              const reserved = view.getUint8(pos); pos+=1;
+              const arch = view.getUint8(pos); pos+=1;
+              const little = arch === 0;
+              const globalMsgNum = view.getUint16(pos, little); pos+=2;
+
+              const numFields = view.getUint8(pos); pos+=1;
+              const fields = [];
+              for (let i=0;i<numFields;i++) {
+                const fieldNum = view.getUint8(pos); pos+=1;
+                const size = view.getUint8(pos); pos+=1;
+                const baseType = view.getUint8(pos); pos+=1;
+                fields.push({num: fieldNum, size, baseTypeId: (baseType & 0x1F)});
+              }
+
+              const devFields = [];
+              if (hasDeveloper) {
+                const numDevFields = view.getUint8(pos); pos+=1;
+                for (let i=0;i<numDevFields;i++) {
+                  const dfNum = view.getUint8(pos); pos+=1;
+                  const dfSize = view.getUint8(pos); pos+=1;
+                  const dfIndex = view.getUint8(pos); pos+=1;
+                  devFields.push({num: dfNum, size: dfSize, devIndex: dfIndex});
+                }
+              }
+
+              defMap.set(localNum, {globalMsgNum, little, fields, devFields});
+            } else {
+              // Data message
+              const def = defMap.get(localNum);
+              if (!def) throw new Error('Data message refers to unknown local message: ' + localNum);
+
+              const {obj, bytesConsumed} = this._decodeData(view, pos, def, false, undefined);
+              pos += bytesConsumed;
+
+              if (def.globalMsgNum === 20) {
+                if (obj.timestamp !== undefined) lastTimestamp = obj.timestamp;
+                else if (lastTimestamp !== undefined) obj.timestamp = lastTimestamp;
+              }
+              this._routeMessage(def.globalMsgNum, obj, records);
+            }
+          }
+        }
+
+        this._mapFieldDescriptions();
+
+        return {
+          records,
+          devFieldDescriptions: this.devFieldDescriptions,
+          fileIds: this.fileIds,
+          deviceInfos: this.deviceInfos,
+          fileCreators: this.fileCreators
+        };
+      }
+
+      _routeMessage(globalMsgNum, obj, records){
+        if (globalMsgNum === 20) { // record
+          records.push(obj);
+        } else if (globalMsgNum === 206) { // field_description
+          this.fieldDescObjs.push(obj);
+        } else if (globalMsgNum === 0) { // file_id
+          this.fileIds.push(obj);
+        } else if (globalMsgNum === 23) { // device_info
+          this.deviceInfos.push(obj);
+        } else if (globalMsgNum === 49) { // file_creator
+          this.fileCreators.push(obj);
+        }
+      }
+
+      _decodeData(view, offset, def, isCompressed, compressedTs) {
+        let pos = offset;
+        const obj = { timestamp: undefined, fields: {}, dev: {}, _def: def };
+        for (const fld of def.fields) {
+          const baseId = fld.baseTypeId;
+          const size = fld.size;
+          if (isCompressed && fld.num === 253) {
+            obj.timestamp = compressedTs;
+            continue;
+          }
+          const value = this._readValue(view, pos, baseId, size, def.little);
+          pos += size;
+
+          if (fld.num === 253) {
+            if (typeof value === 'number') obj.timestamp = value;
+          } else {
+            obj.fields[fld.num] = value;
+          }
+        }
+        if (def.devFields && def.devFields.length) {
+          for (const df of def.devFields) {
+            const key = df.devIndex + ':' + df.num; // "developerIndex:fieldNum"
+            const value = this._readDevValue(view, pos, df.size, def.little);
+            pos += df.size;
+            obj.dev[key] = value;
+            this._devKeysUsed.add(key);
+            if (!this.devFieldSizes.has(key)) this.devFieldSizes.set(key, df.size);
+          }
+        }
+        return { obj, bytesConsumed: pos - offset };
+      }
+
+      _readValue(view, pos, baseId, size, little) {
+        switch (baseId) {
+          case 7: { // string
+            const bytes = new Uint8Array(view.buffer, view.byteOffset + pos, size);
+            let zero = bytes.indexOf(0);
+            if (zero < 0) zero = bytes.length;
+            return textDecoder.decode(bytes.subarray(0, zero));
+          }
+          case 0: // enum
+          case 2: // uint8
+          case 10: // uint8z
+            return view.getUint8(pos);
+          case 1: return view.getInt8(pos); // sint8
+          case 3: return view.getInt16(pos, little); // sint16
+          case 4:
+          case 11: return view.getUint16(pos, little); // uint16/uint16z
+          case 5: return view.getInt32(pos, little); // sint32
+          case 6:
+          case 12: return view.getUint32(pos, little); // uint32/uint32z
+          case 8: return view.getFloat32(pos, little); // float32
+          case 9: return view.getFloat64(pos, little); // float64
+          case 13: return view.getUint8(pos); // byte
+          case 14: { // sint64
+            if (view.getBigInt64) return Number(view.getBigInt64(pos, little));
+            const lo = view.getUint32(pos, little);
+            const hi = view.getInt32(pos+4, little);
+            return hi * 4294967296 + lo;
+          }
+          case 15:
+          case 16: { // uint64/uint64z
+            if (view.getBigUint64) return Number(view.getBigUint64(pos, little));
+            const lo = view.getUint32(pos, little);
+            const hi = view.getUint32(pos+4, little);
+            return hi * 4294967296 + lo;
+          }
+          default:
+            return view.getUint8(pos);
+        }
+      }
+
+      _readDevValue(view, pos, size, little) {
+        if (size === 4) {
+          const f = view.getFloat32(pos, little);
+          if (Number.isFinite(f) && Math.abs(f) < 1e12) return f;
+          return view.getInt32(pos, little);
+        } else if (size === 2) {
+          return view.getInt16(pos, little);
+        } else if (size === 1) {
+          return view.getUint8(pos);
+        } else if (size === 8) {
+          const d = view.getFloat64(pos, little);
+          if (Number.isFinite(d)) return d;
+          if (view.getBigInt64) return Number(view.getBigInt64(pos, little));
+          const lo = view.getUint32(pos, little);
+          const hi = view.getUint32(pos+4, little);
+          return hi * 4294967296 + lo;
+        } else {
+          return view.getUint8(pos);
+        }
+      }
+
+      _mapFieldDescriptions() {
+        const candidates = Array.from(this._devKeysUsed);
+        if (candidates.length === 0) return;
+
+        const pairSet = new Set(candidates.map(k => k)); // "devIdx:fieldNum"
+
+        for (const obj of this.fieldDescObjs) {
+          const nums1b = [];
+          const strings = [];
+          for (const v of Object.values(obj.fields)) {
+            if (typeof v === 'number' && Number.isInteger(v) && v >=0 && v<=255) nums1b.push(v);
+            else if (typeof v === 'string' && v.length) strings.push(v.trim());
+          }
+          let matchedKey = null;
+          for (let i=0;i<nums1b.length;i++) {
+            for (let j=0;j<nums1b.length;j++) {
+              if (i===j) continue;
+              const key = nums1b[i] + ':' + nums1b[j];
+              if (pairSet.has(key)) { matchedKey = key; break; }
+            }
+            if (matchedKey) break;
+          }
+          if (matchedKey) {
+            let name = '', units = '';
+            if (strings.length === 1) {
+              const s = strings[0];
+              if (/^([cC]|degC|°C|Celsius|K|F|bpm|min\/km|km|m\/s|spm)$/i.test(s)) { units = s; }
+              else name = s;
+            } else if (strings.length >= 2) {
+              strings.sort((a,b)=>a.length-b.length);
+              units = strings[0];
+              name = strings[strings.length-1];
+            }
+            const existing = this.devFieldDescriptions.get(matchedKey) || {};
+            if (name) existing.name = name;
+            if (units) existing.units = units;
+            this.devFieldDescriptions.set(matchedKey, existing);
+          }
+        }
+      }
+    }
+
+    // Simple responsive dual-axis line chart with drag-to-select
+    class LineChart {
+      constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.series = []; // [{id, name, color, axis: 'left'|'right', visible, points:[{x,y}], fmt?:fn }]
+        this.dpr = Math.max(1, window.devicePixelRatio || 1);
+        this.margins = {top:10, right:55, bottom:26, left:50};
+        this.tooltip = {active:false, x:0, nearest:[]};
+
+        // Drag-select
+        this.dragging = false;
+        this.selStartPx = 0;
+        this.selEndPx = 0;
+        this.onSelectRange = null;
+
+        // Safe default ranges
+        this.xRange = [0, 1];
+        this.yLeft = [50, 180];
+        this.yRight = [20, 40];
+
+        this._bind();
+        this.resize();
+      }
+      _ensureRanges(){
+        if (!Array.isArray(this.xRange) || this.xRange.length!==2 || !isFinite(this.xRange[0]) || !isFinite(this.xRange[1])) {
+          this.xRange = [0, 1];
+        }
+        if (!Array.isArray(this.yLeft) || this.yLeft.length!==2 || !isFinite(this.yLeft[0]) || !isFinite(this.yLeft[1])) {
+          this.yLeft = [50, 180];
+        }
+        if (!Array.isArray(this.yRight) || this.yRight.length!==2 || !isFinite(this.yRight[0]) || !isFinite(this.yRight[1])) {
+          this.yRight = [20, 40];
+        }
+      }
+      setSeries(series){ this.series = series || []; this._computeRanges(); this.draw(); }
+      resize(){
+        const rect = this.canvas.getBoundingClientRect();
+        const cssW = Math.max(1, rect.width);
+        const cssH = Math.max(1, rect.height);
+        this.canvas.width = Math.max(1, Math.floor(cssW * this.dpr));
+        this.canvas.height = Math.max(1, Math.floor(cssH * this.dpr));
+        this.ctx.setTransform(this.dpr,0,0,this.dpr,0,0);
+        this.draw();
+      }
+      _bind(){
+        window.addEventListener('resize', () => this.resize());
+
+        this.canvas.addEventListener('pointerdown', (e)=>{
+          e.preventDefault();
+          const x = this._clientToCanvasX(e.clientX);
+          this.dragging = true;
+          this.selStartPx = x;
+          this.selEndPx = x;
+          // hide tooltip while dragging
+          this.tooltip.active = false;
+          this.draw();
+        });
+        this.canvas.addEventListener('pointermove', (e)=>{
+          if (this.dragging) {
+            e.preventDefault();
+            this.selEndPx = this._clientToCanvasX(e.clientX);
+            this.draw();
+          } else {
+            this._onPointer(e);
+          }
+        });
+        const endDrag = (e)=>{
+          if (!this.dragging) return;
+          e.preventDefault();
+          this.dragging = false;
+          const w = Math.abs(this.selEndPx - this.selStartPx);
+          if (w > 6) {
+            // compute data range and notify
+            const x1 = this._pixToDataX(Math.min(this.selStartPx, this.selEndPx));
+            const x2 = this._pixToDataX(Math.max(this.selStartPx, this.selEndPx));
+            if (this.onSelectRange) this.onSelectRange([x1, x2]);
+          } else {
+            // treat as tap -> show tooltip
+            this.tooltip.active = true;
+            this.tooltip.x = this._clientToCanvasX(e.clientX);
+            this._updateTooltipNearest();
+            this.draw();
+          }
+        };
+        this.canvas.addEventListener('pointerup', endDrag);
+        this.canvas.addEventListener('pointercancel', endDrag);
+        this.canvas.addEventListener('pointerleave', (e)=>{
+          if (this.dragging) endDrag(e);
+          else { this.tooltip.active=false; this.draw(); }
+        });
+      }
+      _clientToCanvasX(clientX){
+        const rect = this.canvas.getBoundingClientRect();
+        return (clientX - rect.left);
+      }
+      _plotWidth(){
+        const W = this.canvas.clientWidth || (this.canvas.width/this.dpr);
+        return Math.max(1, (W - this.margins.left - this.margins.right));
+      }
+      _pixToDataX(px){
+        const [xMin,xMax]=this.xRange;
+        const W = this.canvas.clientWidth || (this.canvas.width/this.dpr);
+        const plotW = this._plotWidth();
+        const rel = clamp((px - this.margins.left)/plotW, 0, 1);
+        return xMin + rel * (xMax - xMin);
+      }
+      _computeRanges(){
+        // X: from visible series
+        let xMin=Infinity, xMax=-Infinity;
+        for (const s of this.series) if (s && s.visible && s.points && s.points.length) {
+          xMin = Math.min(xMin, s.points[0].x);
+          xMax = Math.max(xMax, s.points[s.points.length-1].x);
+        }
+        if (!isFinite(xMin) || !isFinite(xMax) || xMin===xMax) { xMin=0; xMax=1; }
+        this.xRange = [xMin, xMax];
+
+        // Y per axis
+        let lmin=Infinity, lmax=-Infinity, rmin=Infinity, rmax=-Infinity;
+        for (const s of this.series) if (s && s.visible && s.points && s.points.length){
+          for (const p of s.points){
+            if (!Number.isFinite(p.y)) continue;
+            if (s.axis==='left'){ lmin=Math.min(lmin,p.y); lmax=Math.max(lmax,p.y); }
+            else { rmin=Math.min(rmin,p.y); rmax=Math.max(rmax,p.y); }
+          }
+        }
+        if (!isFinite(lmin) || !isFinite(lmax) || lmin===lmax) { lmin=50; lmax=180; }
+        if (!isFinite(rmin) || !isFinite(rmax) || rmin===rmax) { rmin=20; rmax=40; }
+
+        const pad = (min,max)=> {
+          const span = Math.max(1e-9, max-min);
+          const p = span * 0.08;
+          return [min-p, max+p];
+        };
+        this.yLeft = pad(lmin, lmax);
+        this.yRight = pad(rmin, rmax);
+      }
+      _sx(x){
+        const [xMin,xMax]=this.xRange;
+        const W = this.canvas.clientWidth || (this.canvas.width/this.dpr);
+        return this.margins.left + ( (x - xMin) / Math.max(1e-9, (xMax-xMin)) ) * (W - this.margins.left - this.margins.right);
+      }
+      _syLeft(y){
+        const [min,max]=this.yLeft;
+        const H = this.canvas.clientHeight || (this.canvas.height/this.dpr);
+        return (H - this.margins.bottom) - ( (y - min) / Math.max(1e-9, (max-min)) ) * (H - this.margins.top - this.margins.bottom);
+      }
+      _syRight(y){
+        const [min,max]=this.yRight;
+        const H = this.canvas.clientHeight || (this.canvas.height/this.dpr);
+        return (H - this.margins.bottom) - ( (y - min) / Math.max(1e-9, (max-min)) ) * (H - this.margins.top - this.margins.bottom);
+      }
+      draw(){
+        this._ensureRanges();
+
+        const ctx = this.ctx;
+        const W = this.canvas.clientWidth || (this.canvas.width/this.dpr);
+        const H = this.canvas.clientHeight || (this.canvas.height/this.dpr);
+
+        ctx.save();
+        ctx.setTransform(1,0,0,1,0,0);
+        ctx.clearRect(0,0,this.canvas.width,this.canvas.height);
+        ctx.setTransform(this.dpr,0,0,this.dpr,0,0);
+
+        // Grid
+        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--grid') || '#2a2f37';
+        ctx.lineWidth = 1;
+
+        // X ticks
+        const [xMin,xMax]=this.xRange;
+        const xTicks = niceTicks(xMin, xMax, 6);
+        ctx.beginPath();
+        for (const tv of xTicks) {
+          const x = this._sx(tv);
+          ctx.moveTo(x, this.margins.top);
+          ctx.lineTo(x, H - this.margins.bottom);
+        }
+        ctx.stroke();
+
+        // Left Y ticks
+        const lTicks = niceTicks(this.yLeft[0], this.yLeft[1], 5);
+        ctx.beginPath();
+        for (const yv of lTicks) {
+          const y = this._syLeft(yv);
+          ctx.moveTo(this.margins.left, y);
+          ctx.lineTo(W - this.margins.right, y);
+        }
+        ctx.stroke();
+
+        // Labels
+        ctx.fillStyle = '#9aa4b2';
+        ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        for (const tv of xTicks) {
+          const x = this._sx(tv);
+          ctx.fillText(fmtHMS(tv), x, H - this.margins.bottom + 6);
+        }
+
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        for (const yv of lTicks) {
+          const y = this._syLeft(yv);
+          ctx.fillText(Math.round(yv), this.margins.left - 6, y);
+        }
+        // Right Y ticks
+        const rTicks = niceTicks(this.yRight[0], this.yRight[1], 5);
+        ctx.textAlign = 'left';
+        for (const yv of rTicks) {
+          const y = this._syRight(yv);
+          ctx.fillText((Math.round(yv*10)/10).toFixed(1), W - this.margins.right + 6, y);
+        }
+
+        // Clip area
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(this.margins.left, this.margins.top, W - this.margins.left - this.margins.right, H - this.margins.top - this.margins.bottom);
+        ctx.clip();
+
+        // Series
+        for (const s of this.series) {
+          if (!s || !s.visible || !s.points || s.points.length===0) continue;
+          ctx.strokeStyle = s.color;
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          let first = true;
+          const sy = (s.axis==='left') ? (y)=>this._syLeft(y) : (y)=>this._syRight(y);
+          const maxPts = 5000;
+          const step = Math.max(1, Math.floor(s.points.length / maxPts));
+          for (let i=0;i<s.points.length;i+=step) {
+            const p = s.points[i];
+            if (!Number.isFinite(p.y)) continue;
+            const x = this._sx(p.x);
+            const y = sy(p.y);
+            if (first) { ctx.moveTo(x,y); first=false; } else ctx.lineTo(x,y);
+          }
+          ctx.stroke();
+        }
+
+        // Selection rectangle
+        if (this.dragging) {
+          const x1 = this.selStartPx;
+          const x2 = this.selEndPx;
+          const left = Math.min(x1,x2);
+          const right = Math.max(x1,x2);
+          const top = this.margins.top;
+          const bottom = H - this.margins.bottom;
+          ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--select') || '#4fc3f733';
+          ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--select-border') || '#4fc3f7aa';
+          ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.rect(left, top, right-left, bottom-top); ctx.fill(); ctx.stroke();
+        }
+
+        // Tooltip
+        if (this.tooltip.active && !this.dragging) {
+          const xPix = this.tooltip.x;
+          ctx.strokeStyle = '#ffffff33';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(xPix, this.margins.top);
+          ctx.lineTo(xPix, H - this.margins.bottom);
+          ctx.stroke();
+
+          const info = this.tooltip.nearest || [];
+          if (info.length) {
+            const pad = 6;
+            const lines = [];
+            let tStr = '';
+            for (const item of info) if (item.id === 'time') tStr = item.text;
+            if (tStr) lines.push(tStr);
+            for (const item of info) if (item.id!=='time') lines.push(item.text);
+            ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
+            const widths = lines.map(s=>ctx.measureText(s).width);
+            const bw = (widths.length ? Math.max(...widths) : 0) + pad*2;
+            const bh = lines.length*16 + pad*2;
+            let bx = xPix + 8, by = this.margins.top + 8;
+            const Wc = this.canvas.clientWidth || (this.canvas.width/this.dpr);
+            if (bx + bw > Wc - 4) bx = xPix - 8 - bw;
+            if (bx < 4) bx = 4;
+            ctx.fillStyle = '#0b0f14f2';
+            ctx.strokeStyle = '#2a313b';
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.rect(bx, by, bw, bh); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#e5e9f0';
+            for (let i=0;i<lines.length;i++){
+              ctx.fillText(lines[i], bx+pad, by+pad+ (i*16));
+            }
+          }
+        }
+
+        ctx.restore(); // clip
+        ctx.restore();
+      }
+      _onPointer(e){
+        const rect = this.canvas.getBoundingClientRect();
+        const xPix = (e.clientX - rect.left);
+        this.tooltip.active = true;
+        this.tooltip.x = xPix;
+        this._updateTooltipNearest();
+        this.draw();
+      }
+      _updateTooltipNearest(){
+        const [xMin,xMax] = this.xRange;
+        const W = this.canvas.clientWidth || (this.canvas.width/this.dpr);
+        const plotW = Math.max(1, (W - this.margins.left - this.margins.right));
+        const x = xMin + ( (this.tooltip.x - this.margins.left) / plotW ) * (xMax - xMin);
+
+        const nearest = [];
+        nearest.push({id:'time', text:'t = ' + fmtHMS(clamp(x, xMin, xMax))});
+        for (const s of this.series) {
+          if (!s || !s.visible || !s.points || s.points.length===0) continue;
+          const idx = this._bisectX(s.points, x);
+          let best = null;
+          for (const j of [idx-1, idx, idx+1]) {
+            if (j>=0 && j < s.points.length) {
+              const p = s.points[j];
+              const dx = Math.abs(p.x - x);
+              if (!best || dx < best.dx) best = {p, dx};
+            }
+          }
+          if (best) {
+            const val = best.p.y;
+            const vtxt = s.fmt ? s.fmt(val) : String(val);
+            nearest.push({id:s.id, text:`${s.name}: ${vtxt}`});
+          }
+        }
+        this.tooltip.nearest = nearest;
+      }
+      _bisectX(arr, x){
+        let lo=0, hi=arr.length-1;
+        while (lo<=hi){
+          const mid = (lo+hi)>>1;
+          if (arr[mid].x < x) lo = mid+1;
+          else hi = mid-1;
+        }
+        return lo;
+      }
+    }
+
+    // DOM elements
+    const fileInput = document.getElementById('file');
+    const messageEl = document.getElementById('message');
+    const statsEl = document.getElementById('stats');
+    const resetBtn = document.getElementById('resetBtn');
+    const zoomClearBtn = document.getElementById('zoomClearBtn');
+    const mapBtn = document.getElementById('mapBtn');
+    const smoothSlider = document.getElementById('smoothSlider');
+    const smoothText = document.getElementById('smoothText');
+    const deviceNameEl = document.getElementById('deviceName');
+
+    const canvas = document.getElementById('chart');
+    const chart = new LineChart(canvas);
+
+    // Series toggles
+    const toggles = {
+      hr:   document.getElementById('toggle-hr'),
+      core: document.getElementById('toggle-core'),
+      skin: document.getElementById('toggle-skin'),
+      hsi:  document.getElementById('toggle-hsi'),
+      dist: document.getElementById('toggle-dist'),
+      pace: document.getElementById('toggle-pace'),
+      cad:  document.getElementById('toggle-cad'),
+    };
+    for (const el of Object.values(toggles)) {
+      el.addEventListener('change', ()=>{ renderChart(); updateStatsUI(); });
+    }
+
+    // App state
+    let current = {
+      records: [],
+      devDesc: new Map(),
+      fileIds: [],
+      deviceInfos: [],
+      fileCreators: [],
+
+      // base time (FIT epoch) not strictly needed for elapsed axis
+      baseTime: 0,
+
+      // raw (unsmoothed)
+      hrRaw:   [],
+      coreRaw: [],
+      skinRaw: [],
+      hsiRaw:  [],
+      distRaw: [],
+      paceRaw: [],
+      cadRaw:  [],
+
+      // displayed (smoothed)
+      hrSeries:   [],
+      coreSeries: [],
+      skinSeries: [],
+      hsiSeries:  [],
+      distSeries: [],
+      paceSeries: [],
+      cadSeries:  [],
+
+      // dev field mapping for temps
+      coreKey: null,
+      skinKey: null,
+      coreScale: 1,
+      skinScale: 1,
+
+      // smoothing
+      tauSec: 0,
+
+      // show range
+      cutoffX: 0,          // first elapsed where core > 0
+      selection: null      // [x1,x2] selected by drag
+    };
+
+    // Smoothing UI
+    function setSmoothingUI(tau){
+      current.tauSec = Math.max(0, tau||0);
+      smoothText.textContent = 'Smoothing: ' + fmtS(current.tauSec);
+    }
+    function sliderToTau(val){
+      const pct = clamp(Number(val)||0, 0, 100) / 100;
+      return pct * SMOOTH_MAX_SEC;
+    }
+    smoothSlider.addEventListener('input', ()=>{
+      const tau = sliderToTau(smoothSlider.value);
+      setSmoothingUI(tau);
+      recalcSmoothing();
+      renderChart();
+      updateStatsUI();
+    });
+
+    // Reset
+    resetBtn.addEventListener('click', ()=>{
+      fileInput.value = '';
+      messageEl.textContent = 'Load a .FIT file. Drag on the chart to zoom a time range. All parsing and rendering happen locally in your browser.';
+      statsEl.textContent = '';
+      mapBtn.disabled = true;
+      zoomClearBtn.disabled = true;
+      deviceNameEl.textContent = '';
+      resetBtn.disabled = true;
+      current = {
+        records: [], devDesc: new Map(), fileIds: [], deviceInfos: [], fileCreators: [],
+        baseTime: 0,
+        hrRaw: [], coreRaw: [], skinRaw: [], hsiRaw: [], distRaw: [], paceRaw: [], cadRaw: [],
+        hrSeries: [], coreSeries: [], skinSeries: [], hsiSeries: [], distSeries: [], paceSeries: [], cadSeries: [],
+        coreKey: null, skinKey: null, coreScale: 1, skinScale: 1,
+        tauSec: 0, cutoffX: 0, selection: null
+      };
+      smoothSlider.value = "0";
+      setSmoothingUI(0);
+      chart.setSeries([]);
+    });
+
+    // Clear Zoom
+    zoomClearBtn.addEventListener('click', ()=>{
+      current.selection = null;
+      zoomClearBtn.disabled = true;
+      renderChart();
+      updateStatsUI();
+    });
+
+    // Chart selection callback
+    chart.onSelectRange = (range)=>{
+      const x1 = Math.max(range[0], current.cutoffX);
+      const x2 = Math.max(x1, range[1]);
+      current.selection = [x1, x2];
+      zoomClearBtn.disabled = false;
+      renderChart();
+      updateStatsUI();
+    };
+
+    // File input
+    fileInput.addEventListener('change', async (e)=>{
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      resetBtn.disabled = false;
+      messageEl.textContent = 'Parsing...';
+      statsEl.textContent = '';
+      mapBtn.disabled = true;
+      zoomClearBtn.disabled = true;
+
+      try {
+        const buf = await file.arrayBuffer();
+        const parser = new FitParser();
+        const { records, devFieldDescriptions, fileIds, deviceInfos, fileCreators } = parser.parse(buf);
+
+        current.records = records;
+        current.devDesc = devFieldDescriptions;
+        current.fileIds = fileIds;
+        current.deviceInfos = deviceInfos;
+        current.fileCreators = fileCreators;
+
+        deviceNameEl.textContent = computeDeviceString(fileIds, deviceInfos, fileCreators);
+
+        if (!records.length) throw new Error('No record data found');
+
+        // Build elapsed time
+        let firstTs = undefined;
+        for (const r of records) {
+          if (typeof r.timestamp === 'number' && r.timestamp>0) { firstTs = r.timestamp; break; }
+        }
+        if (firstTs === undefined) {
+          records.forEach((r,i)=>r._elapsed = i);
+          messageEl.textContent = 'Warning: No timestamps found. Using sample index as elapsed time.';
+        } else {
+          records.forEach(r => r._elapsed = (r.timestamp - firstTs));
+          messageEl.textContent = 'Parsed successfully. Drag to select and zoom.';
+        }
+        current.baseTime = firstTs || 0;
+
+        // Extract base fields from Record (global 20)
+        const hrRaw = [];
+        const distRaw = [];
+        const paceRaw = [];
+        const cadRaw = [];
+        for (const r of records) {
+          const t = r._elapsed;
+          // HR (field 3)
+          const hr = r.fields[3];
+          if (typeof hr === 'number' && hr>0 && hr<255) hrRaw.push({x:t, y:hr});
+          // Distance meters -> km (field 5)
+          const d = r.fields[5];
+          if (typeof d === 'number' && isFinite(d)) distRaw.push({x:t, y:(d/1000)});
+          // Speed m/s -> pace min/km (field 6)
+          const s = r.fields[6];
+          const pace = (typeof s === 'number' && isFinite(s) && s > 0.2) ? (1000/s)/60 : NaN;
+          paceRaw.push({x:t, y: pace});
+          // Cadence (field 4) -> steps per minute (×2)
+          const c = r.fields[4];
+          if (typeof c === 'number' && isFinite(c)) cadRaw.push({x:t, y: c*2});
+        }
+        current.hrRaw = hrRaw;
+        current.distRaw = distRaw;
+        current.paceRaw = paceRaw;
+        current.cadRaw = cadRaw;
+
+        // Developer fields: Core/Skin temperatures
+        const allDevKeys = new Set();
+        for (const r of records) for (const k in r.dev) allDevKeys.add(k);
+        const candidates = Array.from(allDevKeys);
+
+        // Choose core/skin keys
+        let coreKey = null, skinKey = null;
+        function descFor(k){ return devFieldDescriptions.get(k) || {}; }
+        function looksLikeCore(d){ return d && d.name && /core/i.test(d.name); }
+        function looksLikeSkin(d){ return d && d.name && /skin/i.test(d.name); }
+        function unitsC(d){ return d && d.units && /c|°/i.test(d.units); }
+        for (const k of candidates) {
+          const d = descFor(k);
+          if (unitsC(d) && looksLikeCore(d)) coreKey = coreKey || k;
+          if (unitsC(d) && looksLikeSkin(d)) skinKey = skinKey || k;
+        }
+
+        function seriesFromKey(key){
+          if (!key) return [];
+          const arr=[];
+          for (const r of records) {
+            const v = r.dev[key];
+            if (typeof v === 'number' && isFinite(v)) arr.push({x:r._elapsed, y:v});
+          }
+          return arr;
+        }
+
+        const devSeriesByKey = new Map();
+        for (const k of candidates) devSeriesByKey.set(k, seriesFromKey(k));
+
+        function guessTempKey(excludeKey=null){
+          let bestKey=null, bestScore=-Infinity, bestScale=1;
+          for (const k of candidates) {
+            if (k===excludeKey) continue;
+            const arr = devSeriesByKey.get(k);
+            if (!arr || arr.length<5) continue;
+            const ys = arr.map(p=>p.y).filter(Number.isFinite).slice().sort((a,b)=>a-b);
+            const mid = ys[Math.floor(ys.length/2)];
+            let score = -Math.abs(mid-37); let scale=1;
+            if (mid>60){ // maybe centi-deg
+              const m2 = mid/100; const s2 = -Math.abs(m2-37);
+              if (s2 > score) { score = s2; scale = 0.01; }
+            }
+            const d = descFor(k);
+            if (unitsC(d)) score += 2;
+            if (looksLikeCore(d) || looksLikeSkin(d)) score += 1;
+            if (score > bestScore) {bestScore=score; bestKey=k; bestScale=scale;}
+          }
+          return {key:bestKey, scale:bestScale};
+        }
+        if (!coreKey) { const g = guessTempKey(null); coreKey = g.key; current.coreScale = g.scale || 1; }
+        if (!skinKey) { const g = guessTempKey(coreKey); skinKey = g.key; current.skinScale = g.scale || 1; }
+
+        function scaledSeries(key, scale=1){
+          if (!key) return [];
+          const arr = [];
+          for (const r of records) {
+            const v = r.dev[key];
+            if (typeof v === 'number' && isFinite(v)) {
+              const y = v*scale;
+              if (y > -1000 && y < 1000) arr.push({x:r._elapsed, y});
+            }
+          }
+          return arr;
+        }
+        let coreRaw = scaledSeries(coreKey, current.coreScale);
+        let skinRaw = scaledSeries(skinKey, current.skinScale);
+
+        // Adjust scale heuristics
+        function adjustIfNeeded(series){
+          if (!series.length) return {series, scale:1};
+          const ys = series.map(p=>p.y).sort((a,b)=>a-b);
+          const mid = ys[Math.floor(ys.length/2)];
+          if (mid > 60) return {series: series.map(p=>({x:p.x,y:p.y/100})), scale:0.01};
+          if (mid < 5 && mid > 0.05) return {series: series.map(p=>({x:p.x,y:p.y*10})), scale:10};
+          return {series, scale:1};
+        }
+        if (!coreRaw.length && coreKey) { const alt = adjustIfNeeded(seriesFromKey(coreKey)); coreRaw = alt.series; current.coreScale *= alt.scale; }
+        if (!skinRaw.length && skinKey) { const alt = adjustIfNeeded(seriesFromKey(skinKey)); skinRaw = alt.series; current.skinScale *= alt.scale; }
+
+        current.coreKey = coreKey || null;
+        current.skinKey = skinKey || null;
+        current.coreRaw = coreRaw;
+        current.skinRaw = skinRaw;
+
+        // Detect Heat Strain Index developer field (heuristic)
+        const hsiKey = detectHSIKey(devFieldDescriptions);
+        if (hsiKey) {
+          const hsiRaw = [];
+          for (const r of records) {
+            const v = r.dev[hsiKey];
+            if (typeof v === 'number' && isFinite(v)) hsiRaw.push({x:r._elapsed, y:v});
+          }
+          current.hsiRaw = hsiRaw;
+        } else {
+          current.hsiRaw = [];
+        }
+
+        // Smoothing
+        const tau = sliderToTau(smoothSlider.value);
+        setSmoothingUI(tau);
+        recalcSmoothing();
+
+        // Cutoff: start when core > 0
+        updateCutoff();
+
+        // Reset selection and render
+        current.selection = null;
+        zoomClearBtn.disabled = true;
+        renderChart();
+        updateStatsUI();
+
+        // Messages and mapping button
+        const parts = [];
+        parts.push('Parsed ' + (records.length) + ' records. Drag on the chart to select and zoom.');
+        if (!current.hrRaw.length) parts.push('No heart rate found.');
+        if (!current.coreRaw.length) parts.push('Core temp not auto-detected. Use “Map Fields”.');
+        if (!current.skinRaw.length) parts.push('Skin temp not auto-detected. Use “Map Fields”.');
+        if (!current.hsiRaw.length) parts.push('Heat Strain Index not found (developer field).');
+        messageEl.textContent = parts.join(' ');
+
+        mapBtn.disabled = (candidates.length === 0);
+      } catch (err) {
+        console.error(err);
+        messageEl.innerHTML = '<span class="error">Error: ' + (err && err.message ? err.message : String(err)) + '</span>';
+      }
+    });
+
+    // Detect Heat Strain Index developer field by name heuristic
+    function detectHSIKey(devDesc){
+      for (const [k, d] of devDesc.entries()) {
+        const name = (d.name||'').toLowerCase();
+        if (!name) continue;
+        if ((name.includes('heat') && name.includes('strain')) || name.includes('hsi')) return k;
+      }
+      return null;
+    }
+
+    // Zero-phase exponential smoothing (forward + backward EMA), time-aware, NaN tolerant
+    function smoothZeroPhase(points, tauSec){
+      if (!points || points.length === 0 || !isFinite(tauSec) || tauSec <= 0) return (points||[]).slice();
+
+      // find first finite
+      let i0 = 0;
+      while (i0 < points.length && !Number.isFinite(points[i0].y)) i0++;
+      if (i0 >= points.length) return points.map(p=>({x:p.x, y:NaN}));
+
+      const f = new Array(points.length);
+      let y = points[i0].y;
+      for (let i=0;i<=i0;i++) f[i] = {x:points[i].x, y};
+      for (let i=i0+1; i<points.length; i++){
+        const dt = Math.max(0, points[i].x - points[i-1].x);
+        const alpha = 1 - Math.exp(-dt / tauSec);
+        const v = Number.isFinite(points[i].y) ? points[i].y : y;
+        y = y + alpha * (v - y);
+        f[i] = {x: points[i].x, y};
+      }
+
+      const b = new Array(points.length);
+      let yb = f[points.length-1].y;
+      b[points.length-1] = {x: f[points.length-1].x, y: yb};
+      for (let i=points.length-2; i>=0; i--){
+        const dt = Math.max(0, f[i+1].x - f[i].x);
+        const alpha = 1 - Math.exp(-dt / tauSec);
+        const v = Number.isFinite(f[i].y) ? f[i].y : yb;
+        yb = yb + alpha * (v - yb);
+        b[i] = {x: f[i].x, y: yb};
+      }
+      return b;
+    }
+
+    function recalcSmoothing(){
+      const tau = current.tauSec || 0;
+      current.hrSeries   = smoothZeroPhase(current.hrRaw,   tau);
+      current.coreSeries = smoothZeroPhase(current.coreRaw, tau);
+      current.skinSeries = smoothZeroPhase(current.skinRaw, tau);
+      current.hsiSeries  = smoothZeroPhase(current.hsiRaw,  tau);
+      current.distSeries = smoothZeroPhase(current.distRaw, tau);
+      current.paceSeries = smoothZeroPhase(current.paceRaw, tau);
+      current.cadSeries  = smoothZeroPhase(current.cadRaw,  tau);
+    }
+
+    function updateCutoff(){
+      let cut = 0;
+      const eps = 1e-9;
+      if (current.coreRaw && current.coreRaw.length) {
+        for (const p of current.coreRaw) {
+          if (Number.isFinite(p.y) && p.y > 0 + eps) { cut = p.x; break; }
+        }
+      }
+      current.cutoffX = cut;
+    }
+
+    // Filter to visible x-range (cutoff + selection)
+    function inView(x){
+      if (x < current.cutoffX) return false;
+      if (current.selection) {
+        if (x < current.selection[0] || x > current.selection[1]) return false;
+      }
+      return true;
+    }
+    function filterPoints(arr){ return (arr||[]).filter(p => inView(p.x)); }
+
+    function renderChart(){
+      const series = [
+        { id:'hr',   name:'Heart Rate', color:getVar('--hr','#e53935'),   axis:'left',  visible: toggles.hr.checked,   points: filterPoints(current.hrSeries),   fmt:(v)=> `${Math.round(v)} bpm` },
+        { id:'core', name:'Core Temp',  color:getVar('--core','#1e88e5'), axis:'right', visible: toggles.core.checked, points: filterPoints(current.coreSeries), fmt:(v)=> `${(Math.round(v*100)/100).toFixed(2)} °C` },
+        { id:'skin', name:'Skin Temp',  color:getVar('--skin','#fb8c00'), axis:'right', visible: toggles.skin.checked, points: filterPoints(current.skinSeries), fmt:(v)=> `${(Math.round(v*100)/100).toFixed(2)} °C` },
+        { id:'hsi',  name:'HSI',        color:getVar('--hsi','#ab47bc'),  axis:'right', visible: toggles.hsi.checked,  points: filterPoints(current.hsiSeries),  fmt:(v)=> Number.isFinite(v)? (Math.round(v*100)/100).toFixed(2):'—' },
+        { id:'dist', name:'Distance',   color:getVar('--dist','#66bb6a'), axis:'right', visible: toggles.dist.checked, points: filterPoints(current.distSeries), fmt:(v)=> Number.isFinite(v)? (Math.round(v*100)/100).toFixed(2)+' km':'—' },
+        { id:'pace', name:'Pace',       color:getVar('--pace','#26c6da'), axis:'right', visible: toggles.pace.checked, points: filterPoints(current.paceSeries), fmt:(v)=> fmtPace(v) },
+        { id:'cad',  name:'Cadence',    color:getVar('--cad','#ffd54f'),  axis:'left',  visible: toggles.cad.checked,  points: filterPoints(current.cadSeries),  fmt:(v)=> Number.isFinite(v)? Math.round(v)+' spm':'—' },
+      ];
+      chart.setSeries(series);
+    }
+
+    function getVar(name, fallback){
+      const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      return v || fallback;
+    }
+
+    function arrayMaxInView(arr){
+      if (!arr || !arr.length) return null;
+      let m = -Infinity;
+      for (const p of arr) {
+        if (!inView(p.x)) continue;
+        if (Number.isFinite(p.y)) m = Math.max(m, p.y);
+      }
+      return (m===-Infinity) ? null : m;
+    }
+
+    function updateStatsUI(){
+      const duration = (current.records.length && Number.isFinite(current.records[current.records.length-1]._elapsed))
+        ? current.records[current.records.length-1]._elapsed
+        : 0;
+
+      const hrMax   = arrayMaxInView(current.hrRaw);
+      const coreMax = arrayMaxInView(current.coreRaw);
+      const skinMax = arrayMaxInView(current.skinRaw);
+
+      const hrMaxStr = (hrMax!=null) ? Math.round(hrMax) + ' bpm' : '—';
+      const coreMaxStr = (coreMax!=null) ? (Math.round(coreMax*100)/100).toFixed(2) + ' °C' : '—';
+      const skinMaxStr = (skinMax!=null) ? (Math.round(skinMax*100)/100).toFixed(2) + ' °C' : '—';
+
+      const parts = [
+        `<span>Max Core: <span class="kbd">${coreMaxStr}</span></span>`,
+        `<span>Max Skin: <span class="kbd">${skinMaxStr}</span></span>`,
+        `<span>Max HR: <span class="kbd">${hrMaxStr}</span></span>`,
+        `<span>Elapsed: <span class="kbd">${fmtHMS(viewDuration())}</span></span>`
+      ];
+
+      // Extra fields maxima only if toggled on
+      if (toggles.hsi.checked) {
+        const h = arrayMaxInView(current.hsiRaw);
+        parts.push(`<span>Max HSI: <span class="kbd">${h!=null ? (Math.round(h*100)/100).toFixed(2) : '—'}</span></span>`);
+      }
+      if (toggles.dist.checked) {
+        const d = arrayMaxInView(current.distRaw);
+        parts.push(`<span>Max Distance: <span class="kbd">${d!=null ? (Math.round(d*100)/100).toFixed(2)+' km' : '—'}</span></span>`);
+      }
+      if (toggles.pace.checked) {
+        const p = arrayMaxInView(current.paceRaw);
+        parts.push(`<span>Max Pace: <span class="kbd">${p!=null ? fmtPace(p) : '—'}</span></span>`);
+      }
+      if (toggles.cad.checked) {
+        const c = arrayMaxInView(current.cadRaw);
+        parts.push(`<span>Max Cadence: <span class="kbd">${c!=null ? Math.round(c)+' spm' : '—'}</span></span>`);
+      }
+
+      statsEl.innerHTML = parts.join(' ');
+    }
+
+    function viewDuration(){
+      // Duration of the visible window (from cutoff and optional selection)
+      let start = current.cutoffX;
+      let end = (current.records.length ? current.records[current.records.length-1]._elapsed : 0);
+      if (current.selection) { start = Math.max(start, current.selection[0]); end = Math.min(end, current.selection[1]); }
+      return Math.max(0, end - start);
+    }
+
+    // Mapping modal logic (Core/Skin)
+    const modalBackdrop = document.getElementById('modalBackdrop');
+    const coreSelect = document.getElementById('coreSelect');
+    const skinSelect = document.getElementById('skinSelect');
+    const coreScaleInput = document.getElementById('coreScale');
+    const skinScaleInput = document.getElementById('skinScale');
+    const cancelMap = document.getElementById('cancelMap');
+    const applyMap = document.getElementById('applyMap');
+    const mapHint = document.getElementById('mapHint');
+
+    mapBtn.addEventListener('click', ()=>{
+      const devKeys = getAllDeveloperKeys(current.records);
+      if (devKeys.length === 0) {
+        messageEl.textContent = 'No developer fields found in this file.';
+        return;
+      }
+      coreSelect.innerHTML = '';
+      skinSelect.innerHTML = '';
+      const opts = devKeys.map(k => {
+        const desc = current.devDesc.get(k) || {};
+        const label = niceDevLabel(k, desc, current.records);
+        return {k, label};
+      });
+      for (const {k,label} of opts) {
+        const o1 = document.createElement('option'); o1.value = k; o1.textContent = label; coreSelect.appendChild(o1);
+        const o2 = document.createElement('option'); o2.value = k; o2.textContent = label; skinSelect.appendChild(o2);
+      }
+      if (current.coreKey) coreSelect.value = current.coreKey;
+      if (current.skinKey) skinSelect.value = current.skinKey;
+      coreScaleInput.value = String(current.coreScale || 1);
+      skinScaleInput.value = String(current.skinScale || 1);
+      mapHint.innerHTML = sampleHintHTML(current.records, devKeys);
+      modalBackdrop.style.display = 'flex';
+    });
+
+    cancelMap.addEventListener('click', ()=> { modalBackdrop.style.display='none'; });
+
+    applyMap.addEventListener('click', ()=>{
+      const coreKey = coreSelect.value || null;
+      const skinKey = skinSelect.value || null;
+      let coreScale = parseFloat(coreScaleInput.value); if (!Number.isFinite(coreScale) || coreScale===0) coreScale = 1;
+      let skinScale = parseFloat(skinScaleInput.value); if (!Number.isFinite(skinScale) || skinScale===0) skinScale = 1;
+
+      current.coreKey = coreKey; current.skinKey = skinKey;
+      current.coreScale = coreScale; current.skinScale = skinScale;
+
+      const coreRaw = [];
+      const skinRaw = [];
+      for (const r of current.records) {
+        if (coreKey && typeof r.dev[coreKey] === 'number' && isFinite(r.dev[coreKey])) {
+          coreRaw.push({x:r._elapsed, y:r.dev[coreKey]*coreScale});
+        }
+        if (skinKey && typeof r.dev[skinKey] === 'number' && isFinite(r.dev[skinKey])) {
+          skinRaw.push({x:r._elapsed, y:r.dev[skinKey]*skinScale});
+        }
+      }
+      current.coreRaw = coreRaw;
+      current.skinRaw = skinRaw;
+
+      recalcSmoothing();
+      updateCutoff();
+      // Keep current selection but ensure it's within new data
+      renderChart();
+      updateStatsUI();
+
+      const parts = [];
+      parts.push('Updated mapping.');
+      if (!coreRaw.length) parts.push('No core temp points with this mapping.');
+      if (!skinRaw.length) parts.push('No skin temp points with this mapping.');
+      messageEl.textContent = parts.join(' ');
+
+      modalBackdrop.style.display='none';
+    });
+
+    function getAllDeveloperKeys(records){
+      const set = new Set();
+      for (const r of records) for (const k in r.dev) set.add(k);
+      return Array.from(set);
+    }
+
+    function niceDevLabel(key, desc, records){
+      const sample = (() => {
+        for (const r of records) if (typeof r.dev[key] === 'number' && isFinite(r.dev[key])) return r.dev[key];
+        return null;
+      })();
+      const name = desc?.name ? desc.name : 'Field ' + key;
+      const units = desc?.units ? ' ' + desc.units : '';
+      const val = (sample!=null) ? ` [ex: ${Math.round(sample*100)/100}]` : '';
+      return name + (units ? ` (${units.trim()})` : '') + ' — ' + key + val;
+    }
+
+    function sampleHintHTML(records, devKeys){
+      let html = 'First sample values per field: ';
+      const parts = [];
+      for (const k of devKeys) {
+        let v=null;
+        for (const r of records) if (typeof r.dev[k]==='number') { v=r.dev[k]; break; }
+        if (v!=null) parts.push(`<span class="kbd">${k}</span>: ${Math.round(v*100)/100}`);
+      }
+      html += parts.join(', ');
+      return html;
+    }
+
+    // Device string
+    function computeDeviceString(fileIds, deviceInfos, fileCreators){
+      // Prefer file_id for brand/product/serial, file_creator (or device_info) for SW
+      let manuf = null, product = null, serial = null;
+      if (fileIds && fileIds.length) {
+        const f = fileIds[0].fields || {};
+        manuf = f[1];
+        product = f[2];
+        serial = f[3];
+      }
+      let productName = null, sw = null;
+      if (deviceInfos && deviceInfos.length) {
+        for (const d of deviceInfos) {
+          const f = d.fields || {};
+          if (!productName && typeof f[27] === 'string' && f[27].length) productName = f[27];
+          if (sw==null && (typeof f[5] === 'number')) sw = f[5];
+          if (serial==null && (typeof f[3] === 'number')) serial = f[3];
+          if (manuf==null && (typeof f[2] === 'number')) manuf = f[2];
+          if (product==null && (typeof f[4] === 'number')) product = f[4];
+        }
+      }
+      if (fileCreators && fileCreators.length && (sw==null)) {
+        const fc = fileCreators[0].fields || {};
+        if (typeof fc[0] === 'number') {
+          sw = fc[0];
+          // Heuristic: software_version in file_creator may be scaled by 100 (e.g., 1420 -> 14.20)
+          if (sw >= 1000 && Number.isInteger(sw)) sw = sw/100;
+        }
+      }
+      const brandStr = (typeof manuf === 'number' && MANUFACTURERS[manuf]) ? MANUFACTURERS[manuf] : (manuf!=null ? String(manuf) : 'Unknown');
+      const prodStr = productName || (product!=null ? String(product) : 'Unknown');
+      let swStr = (sw!=null) ? String(sw) : '—';
+      if (typeof sw === 'number' && sw % 1 !== 0) {
+        swStr = (Math.round(sw*100)/100).toFixed(2);
+      }
+      const serialStr = (serial!=null ? String(serial) : '—');
+      return `${brandStr} ${prodStr} ${swStr} (${serialStr})`;
+    }
+
+    // Initialize smoothing UI
+    setSmoothingUI(sliderToTau(smoothSlider.value));
+  </script>
+</body>
+</html>
