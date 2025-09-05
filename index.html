@@ -161,12 +161,11 @@
     </div>
   </header>
 
-  <!-- Sticky bar: only the slider and maxima remain visible while scrolling -->
+  <!-- Sticky bar -->
   <div class="sticky-bar" aria-label="Controls that stay visible">
     <div class="row slider-wrap">
       <span id="smoothText" class="kbd">Smoothing: 0 s</span>
       <input id="smoothSlider" class="range" type="range" min="0" max="100" step="1" value="0" />
-      <span class="kbd" id="modeHint">Tip: Zoom mode Off — slide finger to inspect values. Turn it On to drag-select a range.</span>
     </div>
     <div class="stats" id="stats"></div>
   </div>
@@ -182,7 +181,7 @@
     Privacy: Your file never leaves your device. If temperatures don’t appear automatically, use “Map Fields” to assign developer data fields to Core/Skin and optionally apply a scale (e.g., 0.01).
   </div>
 
-  <!-- Modal for mapping developer fields (Core/Skin) -->
+  <!-- Modal -->
   <div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="mapTitle">
     <div class="modal">
       <h3 id="mapTitle">Map Developer Fields</h3>
@@ -216,7 +215,6 @@
   </div>
 
   <script>
-    // Utility helpers
     const textDecoder = new TextDecoder('utf-8');
     const SMOOTH_MAX_SEC = 30;
 
@@ -263,17 +261,15 @@
       return v || fallback;
     }
 
-    // Manufacturer mapping (common)
     const MANUFACTURERS = {
       1:'Garmin', 13:'SRAM', 15:'Zwift', 23:'Tacx', 32:'Wahoo', 38:'Stages',
       42:'Suunto', 70:'Hammerhead', 76:'Stages', 89:'Polar', 167:'COROS'
     };
 
-    // FIT Parser (records + device_info + developer fields)
     class FitParser {
       constructor() {
         this._devKeysUsed = new Set();
-        this.devFieldDescriptions = new Map(); // "devIdx:fieldNum" -> {name, units}
+        this.devFieldDescriptions = new Map();
         this.fieldDescObjs = [];
         this.fileIds = [];
         this.deviceInfos = [];
@@ -284,10 +280,8 @@
         const view = new DataView(arrayBuffer);
         let pos = 0;
 
-        // Header
         const headerSize = view.getUint8(pos); pos+=1;
-        pos+=1; // protocol
-        pos+=2; // profile
+        pos+=1; pos+=2;
         const dataSize = view.getUint32(pos, true); pos+=4;
         const sig = String.fromCharCode(view.getUint8(pos), view.getUint8(pos+1), view.getUint8(pos+2), view.getUint8(pos+3));
         pos+=4;
@@ -305,7 +299,6 @@
           const header = view.getUint8(pos); pos += 1;
 
           if (header & 0x80) {
-            // Compressed timestamp header
             const localNum = (header >> 5) & 0x03;
             const timeOffset = header & 0x1F;
             const def = defMap.get(localNum);
@@ -384,9 +377,9 @@
       _route(globalMsgNum, obj, records){
         if (globalMsgNum === 20) records.push(obj);
         else if (globalMsgNum === 206) this.fieldDescObjs.push(obj);
-        else if (globalMsgNum === 0) this.fileIds.push(obj);           // file_id
-        else if (globalMsgNum === 23) this.deviceInfos.push(obj);      // device_info
-        else if (globalMsgNum === 49) this.fileCreators.push(obj);     // file_creator
+        else if (globalMsgNum === 0) this.fileIds.push(obj);
+        else if (globalMsgNum === 23) this.deviceInfos.push(obj);
+        else if (globalMsgNum === 49) this.fileCreators.push(obj);
       }
 
       _decodeData(view, offset, def, isCompressed, compressedTs) {
@@ -415,49 +408,28 @@
 
       _readValue(view, pos, baseId, size, little) {
         switch (baseId) {
-          case 7: { // string
-            const bytes = new Uint8Array(view.buffer, view.byteOffset + pos, size);
-            let zero = bytes.indexOf(0);
-            if (zero < 0) zero = bytes.length;
-            return textDecoder.decode(bytes.subarray(0, zero));
-          }
-          case 0: case 2: case 10: return view.getUint8(pos);          // enum/uint8/uint8z
-          case 1: return view.getInt8(pos);                             // sint8
-          case 3: return view.getInt16(pos, little);                    // sint16
-          case 4: case 11: return view.getUint16(pos, little);          // uint16/uint16z
-          case 5: return view.getInt32(pos, little);                    // sint32
-          case 6: case 12: return view.getUint32(pos, little);          // uint32/uint32z
+          case 7: { const bytes = new Uint8Array(view.buffer, view.byteOffset + pos, size); let zero = bytes.indexOf(0); if (zero < 0) zero = bytes.length; return textDecoder.decode(bytes.subarray(0, zero)); }
+          case 0: case 2: case 10: return view.getUint8(pos);
+          case 1: return view.getInt8(pos);
+          case 3: return view.getInt16(pos, little);
+          case 4: case 11: return view.getUint16(pos, little);
+          case 5: return view.getInt32(pos, little);
+          case 6: case 12: return view.getUint32(pos, little);
           case 8: return view.getFloat32(pos, little);
           case 9: return view.getFloat64(pos, little);
           case 13: return view.getUint8(pos);
-          case 14: { // sint64
-            if (view.getBigInt64) return Number(view.getBigInt64(pos, little));
-            const lo = view.getUint32(pos, little), hi = view.getInt32(pos+4, little);
-            return hi * 4294967296 + lo;
-          }
-          case 15: case 16: { // uint64/uint64z
-            if (view.getBigUint64) return Number(view.getBigUint64(pos, little));
-            const lo = view.getUint32(pos, little), hi = view.getUint32(pos+4, little);
-            return hi * 4294967296 + lo;
-          }
+          case 14: { if (view.getBigInt64) return Number(view.getBigInt64(pos, little)); const lo = view.getUint32(pos, little), hi = view.getInt32(pos+4, little); return hi * 4294967296 + lo; }
+          case 15: case 16: { if (view.getBigUint64) return Number(view.getBigUint64(pos, little)); const lo = view.getUint32(pos, little), hi = view.getUint32(pos+4, little); return hi * 4294967296 + lo; }
           default: return view.getUint8(pos);
         }
       }
 
       _readDevValue(view, pos, size, little) {
-        if (size === 4) {
-          const f = view.getFloat32(pos, little);
-          if (Number.isFinite(f) && Math.abs(f) < 1e12) return f;
-          return view.getInt32(pos, little);
-        } else if (size === 2) return view.getInt16(pos, little);
+        if (size === 4) { const f = view.getFloat32(pos, little); if (Number.isFinite(f) && Math.abs(f) < 1e12) return f; return view.getInt32(pos, little); }
+        else if (size === 2) return view.getInt16(pos, little);
         else if (size === 1) return view.getUint8(pos);
-        else if (size === 8) {
-          const d = view.getFloat64(pos, little);
-          if (Number.isFinite(d)) return d;
-          if (view.getBigInt64) return Number(view.getBigInt64(pos, little));
-          const lo = view.getUint32(pos, little), hi = view.getUint32(pos+4, little);
-          return hi * 4294967296 + lo;
-        } else return view.getUint8(pos);
+        else if (size === 8) { const d = view.getFloat64(pos, little); if (Number.isFinite(d)) return d; if (view.getBigInt64) return Number(view.getBigInt64(pos, little)); const lo = view.getUint32(pos, little), hi = view.getUint32(pos+4, little); return hi * 4294967296 + lo; }
+        else return view.getUint8(pos);
       }
 
       _mapFieldDescriptions() {
@@ -481,13 +453,8 @@
           }
           if (matchedKey){
             let name='', units='';
-            if (strings.length===1){
-              const s=strings[0];
-              if (/^([cC]|degC|°C|Celsius|K|F|bpm|min\/km|km|m\/s|spm)$/i.test(s)) units=s; else name=s;
-            } else if (strings.length>=2){
-              strings.sort((a,b)=>a.length-b.length);
-              units=strings[0]; name=strings[strings.length-1];
-            }
+            if (strings.length===1){ const s=strings[0]; if (/^([cC]|degC|°C|Celsius|K|F|bpm|min\/km|km|m\/s|spm)$/i.test(s)) units=s; else name=s; }
+            else if (strings.length>=2){ strings.sort((a,b)=>a.length-b.length); units=strings[0]; name=strings[strings.length-1]; }
             const ex=this.devFieldDescriptions.get(matchedKey)||{};
             if (name) ex.name=name;
             if (units) ex.units=units;
@@ -497,25 +464,22 @@
       }
     }
 
-    // Chart with touch-friendly zoom mode toggle
     class LineChart {
       constructor(canvas) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
-        this.series = []; // {id,name,color,axis:'left'|'right',visible,points:[{x,y}],fmt?}
+        this.series = [];
         this.dpr = Math.max(1, window.devicePixelRatio || 1);
         this.margins = {top:10, right:60, bottom:26, left:50};
         this.tooltip = {active:false, x:0, nearest:[]};
 
-        // Selection
-        this.zoomMode = false;           // new: when true, drag to select
+        this.zoomMode = false;
         this.dragging = false;
         this.selStartPx = 0;
         this.selEndPx = 0;
-        this.crosshairDragging = false;  // drag to move crosshair when zoomMode = false
+        this.crosshairDragging = false;
         this.onSelectRange = null;
 
-        // Ranges
         this.xRange = [0, 1];
         this.yLeft = [20, 40];
         this.yRight = [50, 180];
@@ -554,7 +518,6 @@
             this.canvas.setPointerCapture(e.pointerId);
             this.draw();
           } else {
-            // inspect values
             e.preventDefault();
             this.crosshairDragging = true;
             this.tooltip.active = true;
@@ -572,7 +535,6 @@
             this.selEndPx = x;
             this.draw();
           } else if (this.crosshairDragging || e.pointerType === 'mouse') {
-            // Update crosshair live on mouse move or while touch-dragging the crosshair
             e.preventDefault();
             this.tooltip.active = true;
             this.tooltip.x = x;
@@ -620,7 +582,6 @@
         return xMin + rel * (xMax - xMin);
       }
       _computeRanges(){
-        // X range from visible series
         let xMin=Infinity, xMax=-Infinity;
         for (const s of this.series) if (s && s.visible && s.points && s.points.length) {
           xMin = Math.min(xMin, s.points[0].x);
@@ -629,7 +590,6 @@
         if (!isFinite(xMin) || !isFinite(xMax) || xMin===xMax) { xMin=0; xMax=1; }
         this.xRange = [xMin, xMax];
 
-        // Left axis (temps): start at floor of min temp in view
         let lmin=Infinity, lmax=-Infinity;
         for (const s of this.series) if (s && s.visible && s.axis==='left' && s.points && s.points.length){
           for (const p of s.points){ if (Number.isFinite(p.y)) { lmin=Math.min(lmin,p.y); lmax=Math.max(lmax,p.y); } }
@@ -637,13 +597,11 @@
         if (!isFinite(lmin) || !isFinite(lmax)) { lmin=20; lmax=40; }
         const lstart = Math.floor(lmin);
         let lend = lmax;
-        if (lend <= lstart) lend = lstart + 1; // ensure span
-        // small top padding (only at top, not at bottom per requirement)
+        if (lend <= lstart) lend = lstart + 1;
         const spanL = Math.max(1e-6, lend - lstart);
         lend = lend + spanL*0.05;
         this.yLeft = [lstart, lend];
 
-        // Right axis: auto based on visible right-axis series
         let rmin=Infinity, rmax=-Infinity;
         for (const s of this.series) if (s && s.visible && s.axis==='right' && s.points && s.points.length){
           for (const p of s.points){ if (Number.isFinite(p.y)) { rmin=Math.min(rmin,p.y); rmax=Math.max(rmax,p.y); } }
@@ -680,11 +638,9 @@
         ctx.clearRect(0,0,this.canvas.width,this.canvas.height);
         ctx.setTransform(this.dpr,0,0,this.dpr,0,0);
 
-        // Grid
         ctx.strokeStyle = getVar('--grid','#2a2f37');
         ctx.lineWidth = 1;
 
-        // X ticks
         const [xMin,xMax]=this.xRange;
         const xTicks = niceTicks(xMin, xMax, 6);
         ctx.beginPath();
@@ -695,7 +651,6 @@
         }
         ctx.stroke();
 
-        // Left Y ticks (temps)
         const lTicks = niceTicks(this.yLeft[0], this.yLeft[1], 5);
         ctx.beginPath();
         for (const yv of lTicks) {
@@ -705,7 +660,6 @@
         }
         ctx.stroke();
 
-        // Labels
         ctx.fillStyle = '#9aa4b2';
         ctx.font = '12px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial';
         ctx.textAlign = 'center';
@@ -722,7 +676,6 @@
           ctx.fillText((Math.round(yv*10)/10).toFixed(1), this.margins.left - 6, y);
         }
 
-        // Right Y ticks
         const rTicks = niceTicks(this.yRight[0], this.yRight[1], 5);
         ctx.textAlign = 'left';
         for (const yv of rTicks) {
@@ -730,13 +683,11 @@
           ctx.fillText((Math.round(yv*10)/10).toFixed(1), W - this.margins.right + 6, y);
         }
 
-        // Plot clip
         ctx.save();
         ctx.beginPath();
         ctx.rect(this.margins.left, this.margins.top, W - this.margins.left - this.margins.right, H - this.margins.top - this.margins.bottom);
         ctx.clip();
 
-        // Draw series
         for (const s of this.series) {
           if (!s || !s.visible || !s.points || s.points.length===0) continue;
           ctx.strokeStyle = s.color;
@@ -756,7 +707,6 @@
           ctx.stroke();
         }
 
-        // Selection rectangle
         if (this.dragging) {
           const x1 = this.selStartPx, x2 = this.selEndPx;
           const left = Math.min(x1,x2), right = Math.max(x1,x2);
@@ -767,7 +717,6 @@
           ctx.beginPath(); ctx.rect(left, top, right-left, bottom-top); ctx.fill(); ctx.stroke();
         }
 
-        // Tooltip
         if (this.tooltip.active && !this.dragging) {
           const xPix = this.tooltip.x;
           ctx.strokeStyle = '#ffffff33';
@@ -804,7 +753,7 @@
           }
         }
 
-        ctx.restore(); // clip
+        ctx.restore();
         ctx.restore();
       }
       _updateTooltipNearest(){
@@ -843,7 +792,6 @@
       }
     }
 
-    // DOM elements
     const fileInput = document.getElementById('file');
     const messageEl = document.getElementById('message');
     const statsEl = document.getElementById('stats');
@@ -858,7 +806,6 @@
     const canvas = document.getElementById('chart');
     const chart = new LineChart(canvas);
 
-    // Series toggles
     const toggles = {
       hr:   document.getElementById('toggle-hr'),
       core: document.getElementById('toggle-core'),
@@ -872,7 +819,6 @@
       el.addEventListener('change', ()=>{ renderChart(); updateStatsUI(); });
     }
 
-    // App state
     let current = {
       records: [],
       devDesc: new Map(),
@@ -882,16 +828,14 @@
 
       baseTime: 0,
 
-      // raw (unsmoothed)
       hrRaw:   [],
       coreRaw: [],
       skinRaw: [],
       hsiRaw:  [],
-      distRaw: [],  // km (display units)
-      paceRaw: [],  // min/km
+      distRaw: [],
+      paceRaw: [],
       cadRaw:  [],
 
-      // displayed (smoothed)
       hrSeries:   [],
       coreSeries: [],
       skinSeries: [],
@@ -912,14 +856,13 @@
       zoomMode: false
     };
 
-    // Smoothing UI
     function setSmoothingUI(tau){
       current.tauSec = Math.max(0, tau||0);
       smoothText.textContent = 'Smoothing: ' + fmtS(current.tauSec);
     }
     function sliderToTau(val){
       const pct = clamp(Number(val)||0, 0, 100) / 100;
-      return pct * SMOOTH_MAX_SEC;
+      return pct * 30;
     }
     smoothSlider.addEventListener('input', ()=>{
       const tau = sliderToTau(smoothSlider.value);
@@ -929,7 +872,6 @@
       updateStatsUI();
     });
 
-    // Zoom mode toggle
     zoomModeBtn.addEventListener('click', ()=>{
       current.zoomMode = !current.zoomMode;
       chart.setZoomMode(current.zoomMode);
@@ -939,7 +881,6 @@
         : 'Zoom mode is OFF. Slide your finger across the graph to inspect values.';
     });
 
-    // Clear Zoom
     zoomClearBtn.addEventListener('click', ()=>{
       current.selection = null;
       zoomClearBtn.disabled = true;
@@ -947,7 +888,6 @@
       updateStatsUI();
     });
 
-    // Reset
     resetBtn.addEventListener('click', ()=>{
       fileInput.value = '';
       messageEl.textContent = 'Load a .FIT file. Zoom mode is OFF by default so you can slide across the graph to see values. Turn Zoom mode ON to drag-select a time range. All parsing and rendering happen locally.';
@@ -971,7 +911,6 @@
       chart.setSeries([]);
     });
 
-    // Chart selection callback
     chart.onSelectRange = (range)=>{
       if (!range) return;
       const x1 = Math.max(range[0], current.cutoffX);
@@ -982,7 +921,6 @@
       updateStatsUI();
     };
 
-    // File input
     fileInput.addEventListener('change', async (e)=>{
       const file = e.target.files && e.target.files[0];
       if (!file) return;
@@ -1008,7 +946,7 @@
 
         if (!records.length) throw new Error('No record data found');
 
-        // Build elapsed time
+        // Elapsed time
         let firstTs = undefined;
         for (const r of records) {
           if (typeof r.timestamp === 'number' && r.timestamp>0) { firstTs = r.timestamp; break; }
@@ -1018,67 +956,63 @@
           messageEl.textContent = 'Warning: No timestamps found. Using sample index as elapsed time.';
         } else {
           records.forEach(r => r._elapsed = (r.timestamp - firstTs));
-          messageEl.textContent = 'Parsed. Zoom mode OFF: slide to inspect; turn ON to drag-select.';
+          messageEl.textContent = 'Parsed. Zoom OFF: slide to inspect; Zoom ON: drag-select.';
         }
         current.baseTime = firstTs || 0;
 
-        // Extract base fields (from record message 20)
+        // Extract base fields
         const hrRaw = [];
-        const distKmRaw = []; // km displayed
+        const distKmRaw = [];
         const paceRaw = [];
         const cadRaw = [];
 
-        let prevDcm = null; // distance in centimeters (assumed)
+        let prevDcm = null;
         let prevT = null;
 
         for (const r of records) {
           const t = r._elapsed;
 
-          // Heart rate (field 3)
           const hr = r.fields[3];
           if (typeof hr === 'number' && hr>0 && hr<255) hrRaw.push({x:t, y:hr});
 
-          // Cadence (field 4) -> steps per minute (x2)
           const c = r.fields[4];
           if (typeof c === 'number' && isFinite(c)) cadRaw.push({x:t, y: c*2});
 
-          // Distance (field 5) — appears to be centimeters in your files
           const dRaw = r.fields[5];
           if (typeof dRaw === 'number' && isFinite(dRaw)) {
-            // Display distance in km: cm -> km = /100000
-            const dKm = dRaw / 100000;
+            const dKm = dRaw / 100000; // cm -> km
             distKmRaw.push({x:t, y:dKm});
+          }
 
-            // Pace from distance delta/time delta (robust)
-            if (prevDcm!=null && prevT!=null) {
+          // Pace from enhanced_speed (preferred), else speed, else distance delta
+          const enhancedSpeed = r.fields[114] ?? r.fields[134]; // common locations for enhanced_speed
+          const speed = r.fields[6];                            // speed (m/s)
+          let pace = NaN;
+          const fromSpeed = (v)=> (typeof v==='number' && isFinite(v) && v>0.05) ? (1000/v)/60 : NaN;
+
+          if (enhancedSpeed !== undefined) pace = fromSpeed(enhancedSpeed);
+          if (!isFinite(pace) && speed !== undefined) pace = fromSpeed(speed);
+
+          if (!isFinite(pace)) {
+            if (typeof dRaw === 'number' && isFinite(dRaw) && prevDcm!=null && prevT!=null) {
               const dd_cm = dRaw - prevDcm;
               const dt = t - prevT;
               if (dt > 0 && dd_cm >= 0) {
-                const dd_m = dd_cm / 100; // cm -> m
-                const speed = dd_m / dt;  // m/s
-                if (speed > 0.05) {       // ignore near-0 noise
-                  const minPerKm = (1000 / speed) / 60;
-                  paceRaw.push({x:t, y:minPerKm});
-                } else {
-                  paceRaw.push({x:t, y:NaN});
-                }
-              } else {
-                paceRaw.push({x:t, y:NaN});
+                const v = (dd_cm/100) / dt; // m/s
+                if (v > 0.05) pace = (1000/v)/60;
               }
-            } else {
-              paceRaw.push({x:t, y:NaN});
             }
-            prevDcm = dRaw; prevT = t;
-          } else {
-            paceRaw.push({x:t, y:NaN});
           }
+          paceRaw.push({x:t, y: isFinite(pace) ? pace : NaN});
+
+          if (typeof dRaw === 'number' && isFinite(dRaw)) { prevDcm = dRaw; prevT = t; }
         }
         current.hrRaw = hrRaw;
         current.distRaw = distKmRaw;
         current.paceRaw = paceRaw;
         current.cadRaw = cadRaw;
 
-        // Developer fields: Core/Skin temperatures
+        // Developer fields: Core/Skin temps
         const allDevKeys = new Set();
         for (const r of records) for (const k in r.dev) allDevKeys.add(k);
         const candidates = Array.from(allDevKeys);
@@ -1116,7 +1050,7 @@
             const ys = arr.map(p=>p.y).filter(Number.isFinite).slice().sort((a,b)=>a-b);
             const mid = ys[Math.floor(ys.length/2)];
             let score = -Math.abs(mid-37); let scale=1;
-            if (mid>60){ const m2 = mid/100; const s2 = -Math.abs(m2-37); if (s2 > score) { score = s2; scale = 0.01; } }
+            if (mid>60){ const m2=mid/100; const s2=-Math.abs(m2-37); if (s2>score){score=s2; scale=0.01;} }
             const d = descFor(k);
             if (unitsC(d)) score += 2;
             if (looksLikeCore(d) || looksLikeSkin(d)) score += 1;
@@ -1142,7 +1076,6 @@
         let coreRaw = scaledSeries(coreKey, current.coreScale);
         let skinRaw = scaledSeries(skinKey, current.skinScale);
 
-        // Adjust scale heuristics if needed
         function adjustIfNeeded(series){
           if (!series.length) return {series, scale:1};
           const ys = series.map(p=>p.y).sort((a,b)=>a-b);
@@ -1159,7 +1092,6 @@
         current.coreRaw = coreRaw;
         current.skinRaw = skinRaw;
 
-        // Detect Heat Strain Index (developer field name contains 'heat'+'strain' or 'hsi')
         const hsiKey = detectHSIKey(devFieldDescriptions);
         current.hsiRaw = [];
         if (hsiKey) {
@@ -1169,21 +1101,17 @@
           }
         }
 
-        // Smoothing
         const tau = sliderToTau(smoothSlider.value);
         setSmoothingUI(tau);
         recalcSmoothing();
 
-        // Cutoff: start when core > 0
         updateCutoff();
 
-        // Reset selection and render
         current.selection = null;
         zoomClearBtn.disabled = true;
         renderChart();
         updateStatsUI();
 
-        // Messages and mapping button
         const parts = [];
         parts.push('Parsed ' + (records.length) + ' records. Zoom OFF: slide to inspect; Zoom ON: drag-select.');
         if (!current.hrRaw.length) parts.push('No heart rate found.');
@@ -1199,7 +1127,6 @@
       }
     });
 
-    // Detect Heat Strain Index developer field by name heuristic
     function detectHSIKey(devDesc){
       for (const [k, d] of devDesc.entries()) {
         const name = (d.name||'').toLowerCase();
@@ -1209,11 +1136,9 @@
       return null;
     }
 
-    // Zero-phase exponential smoothing (forward + backward EMA), time-aware, NaN-tolerant
     function smoothZeroPhase(points, tauSec){
       if (!points || points.length === 0 || !isFinite(tauSec) || tauSec <= 0) return (points||[]).slice();
 
-      // find first finite
       let i0 = 0;
       while (i0 < points.length && !Number.isFinite(points[i0].y)) i0++;
       if (i0 >= points.length) return points.map(p=>({x:p.x, y:NaN}));
@@ -1264,7 +1189,6 @@
       current.cutoffX = cut;
     }
 
-    // Visible window filter (cutoff + selection)
     function inView(x){
       if (x < current.cutoffX) return false;
       if (current.selection) {
@@ -1276,11 +1200,9 @@
 
     function renderChart(){
       const series = [
-        // Primary axis (left): temps
         { id:'core', name:'Core Temp',  color:getVar('--core','#1e88e5'), axis:'left',  visible: toggles.core.checked, points: filterPoints(current.coreSeries), fmt:(v)=> `${(Math.round(v*100)/100).toFixed(2)} °C` },
         { id:'skin', name:'Skin Temp',  color:getVar('--skin','#fb8c00'), axis:'left',  visible: toggles.skin.checked, points: filterPoints(current.skinSeries), fmt:(v)=> `${(Math.round(v*100)/100).toFixed(2)} °C` },
 
-        // Secondary axis (right): everything else
         { id:'hr',   name:'Heart Rate', color:getVar('--hr','#e53935'),   axis:'right', visible: toggles.hr.checked,   points: filterPoints(current.hrSeries),   fmt:(v)=> `${Math.round(v)} bpm` },
         { id:'hsi',  name:'HSI',        color:getVar('--hsi','#ab47bc'),  axis:'right', visible: toggles.hsi.checked,  points: filterPoints(current.hsiSeries),  fmt:(v)=> Number.isFinite(v)? (Math.round(v*100)/100).toFixed(2):'—' },
         { id:'dist', name:'Distance',   color:getVar('--dist','#66bb6a'), axis:'right', visible: toggles.dist.checked, points: filterPoints(current.distSeries), fmt:(v)=> Number.isFinite(v)? (Math.round(v*100)/100).toFixed(2)+' km':'—' },
@@ -1339,7 +1261,6 @@
       return Math.max(0, end - start);
     }
 
-    // Mapping modal logic (Core/Skin)
     const modalBackdrop = document.getElementById('modalBackdrop');
     const coreSelect = document.getElementById('coreSelect');
     const skinSelect = document.getElementById('skinSelect');
@@ -1438,25 +1359,22 @@
       return html;
     }
 
-    // Device string: use Device Info with device_index = creator (assumed value 0). Fallbacks if missing.
     function computeDeviceStringFromCreator(deviceInfos, fileIds, fileCreators){
-      // Find device_info with device_index == 0 (creator)
       let picked = null;
       for (const d of deviceInfos||[]) {
         const f = d.fields||{};
-        if (f[0]===0) { picked = d; break; } // device_index field number 0
+        if (f[0]===0) { picked = d; break; }
       }
       if (!picked && deviceInfos && deviceInfos.length) picked = deviceInfos[0];
 
       let manuf = null, product = null, serial = null, sw = null;
       if (picked) {
         const f = picked.fields||{};
-        manuf = f[2];           // manufacturer
-        product = f[4];         // product
-        serial = f[3];          // serial_number
-        sw = f[5];              // software_version
+        manuf = f[2];
+        product = f[4];
+        serial = f[3];
+        sw = f[5];
       }
-      // Fallbacks from file_id and file_creator
       if ((manuf==null || product==null || serial==null) && fileIds && fileIds.length) {
         const f = fileIds[0].fields||{};
         if (manuf==null) manuf = f[1];
@@ -1479,7 +1397,6 @@
       return `${brandStr} ${prodStr} (sw version = ${swStr}, serial= ${serialStr})`;
     }
 
-    // Initialize smoothing UI and default chart mode
     setSmoothingUI(sliderToTau(smoothSlider.value));
     chart.setZoomMode(false);
   </script>
