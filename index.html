@@ -19,12 +19,21 @@
       --warn:#ef6c00;
       --err:#e53935;
 
-      --hsi:#ab47bc;     /* purple */
-      --dist:#66bb6a;    /* green */
-      --pace:#26c6da;    /* teal */
-      --cad:#ffd54f;     /* yellow */
+      --hsi:#ab47bc;
+      --dist:#66bb6a;
+      --pace:#26c6da;
+      --cad:#ffd54f;
       --select:#4fc3f733;
       --select-border:#4fc3f7aa;
+
+      /* HSI zones on white canvas */
+      --hsi-bg-green:#2e7d321a;
+      --hsi-bg-orange:#ef6c001a;
+      --hsi-bg-red:#e539351a;
+
+      /* Elevation background */
+      --elev-stroke:#6b728066;
+      --elev-fill:#6b728029;
     }
     *{box-sizing:border-box}
     html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
@@ -37,8 +46,12 @@
       border-bottom:1px solid #20262e;
     }
     header .title{font-weight:700;font-size:16px;margin-bottom:6px}
+    .section-heading{
+      font-weight:700;font-size:12px;letter-spacing:.04em;color:var(--muted);
+      text-transform:uppercase;margin:6px 0 2px 0;
+    }
     .device-line{
-      color:var(--muted);
+      color:var(--text);
       font-size:13px;
       margin:2px 0 8px 0;
       white-space:nowrap;
@@ -71,8 +84,8 @@
     .chip input:checked + .label{opacity:1}
     .chip .label{opacity:0.95}
     .chip .unit{color:var(--muted);margin-left:4px}
+    .chip .state{color:var(--muted);margin-left:8px;font-weight:600}
 
-    /* Sticky bar: stays on top while scrolling (iPhone-friendly) */
     .sticky-bar{
       position:sticky;top:0;z-index:50;
       padding:8px 14px;
@@ -102,8 +115,8 @@
     .wrap{padding:10px;display:flex;flex-direction:column;gap:10px}
     .card{background:var(--panel);border:1px solid #20262e;border-radius:12px;padding:10px}
     canvas{
-      display:block;width:100%;height:58vh;background:#0b0f14;border-radius:10px;
-      touch-action:none; /* we handle gestures */
+      display:block;width:100%;height:58vh;background:#ffffff;border-radius:10px;
+      touch-action:none;
     }
     .msg{font-size:14px;color:var(--muted);margin-top:6px}
     .error{color:var(--err)}
@@ -111,12 +124,12 @@
     .warn{color:var(--warn)}
     .footer{color:var(--muted);font-size:12px;text-align:center;padding:16px}
 
-    /* Modal */
     .modal-backdrop{
       position:fixed;inset:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;padding:16px;z-index:100;
     }
     .modal{
       width:100%;max-width:520px;background:var(--panel);border:1px solid #2a313b;border-radius:12px;padding:14px;
+      outline:none;
     }
     .modal h3{margin:0 0 8px 0}
     .modal p{color:var(--muted);margin:0 0 12px 0}
@@ -126,7 +139,6 @@
       background:#0f141a;color:var(--text);border:1px solid #2a313b;border-radius:8px;padding:8px;min-width:140px
     }
 
-    /* Selection rectangle */
     .sel-rect{
       background:var(--select);
       border:1px solid var(--select-border);
@@ -135,8 +147,10 @@
 </head>
 <body>
   <header>
-    <div class="title">FIT Viewer — Heart Rate, Core Temp, Skin Temp</div>
-    <div id="deviceName" class="device-line"></div>
+    <div class="title">FIT Viewer -- Heart Rate, Core Temp, Skin Temp</div>
+
+    <div class="section-heading" aria-hidden="true">Device Metadata</div>
+    <div id="deviceName" class="device-line" aria-label="Device metadata line"></div>
 
     <div class="row">
       <input id="file" type="file" accept=".fit" />
@@ -146,26 +160,26 @@
       <button id="mapBtn" class="btn" disabled>Map Fields</button>
     </div>
 
-    <!-- Legend: base series -->
     <div class="legend" id="legend">
-      <label class="chip"><input type="checkbox" id="toggle-hr" checked><span class="swatch" style="background:var(--hr)"></span><span class="label">Heart Rate <span class="unit">(bpm)</span></span></label>
-      <label class="chip"><input type="checkbox" id="toggle-core" checked><span class="swatch" style="background:var(--core)"></span><span class="label">Core Temp <span class="unit">(°C)</span></span></label>
-      <label class="chip"><input type="checkbox" id="toggle-skin" checked><span class="swatch" style="background:var(--skin)"></span><span class="label">Skin Temp <span class="unit">(°C)</span></span></label>
+      <label class="chip"><input type="checkbox" id="toggle-hr" checked><span class="swatch" style="background:var(--hr)"></span><span class="label">Heart Rate <span class="unit">(bpm)</span></span><span class="state" id="state-hr">On</span></label>
+      <label class="chip"><input type="checkbox" id="toggle-core" checked><span class="swatch" style="background:var(--core)"></span><span class="label">Core Temp <span class="unit">(°C)</span></span><span class="state" id="state-core">On</span></label>
+      <label class="chip"><input type="checkbox" id="toggle-skin" checked><span class="swatch" style="background:var(--skin)"></span><span class="label">Skin Temp <span class="unit">(°C)</span></span><span class="state" id="state-skin">On</span></label>
     </div>
-    <!-- Legend: extra fields (initially off) -->
     <div class="legend">
-      <label class="chip"><input type="checkbox" id="toggle-hsi"><span class="swatch" style="background:var(--hsi)"></span><span class="label">Heat Strain Index</span></label>
-      <label class="chip"><input type="checkbox" id="toggle-dist"><span class="swatch" style="background:var(--dist)"></span><span class="label">Distance <span class="unit">(km)</span></span></label>
-      <label class="chip"><input type="checkbox" id="toggle-pace"><span class="swatch" style="background:var(--pace)"></span><span class="label">Pace <span class="unit">(min/km)</span></span></label>
-      <label class="chip"><input type="checkbox" id="toggle-cad"><span class="swatch" style="background:var(--cad)"></span><span class="label">Cadence <span class="unit">(spm)</span></span></label>
+      <label class="chip"><input type="checkbox" id="toggle-hsi"><span class="swatch" style="background:var(--hsi)"></span><span class="label">Heat Strain Index</span><span class="state" id="state-hsi">Off</span></label>
+      <label class="chip"><input type="checkbox" id="toggle-dist"><span class="swatch" style="background:var(--dist)"></span><span class="label">Distance <span class="unit">(km)</span></span><span class="state" id="state-dist">Off</span></label>
+      <label class="chip"><input type="checkbox" id="toggle-pace"><span class="swatch" style="background:var(--pace)"></span><span class="label">Pace <span class="unit">(min/km)</span></span><span class="state" id="state-pace">Off</span></label>
+      <label class="chip"><input type="checkbox" id="toggle-cad"><span class="swatch" style="background:var(--cad)"></span><span class="label">Cadence <span class="unit">(spm)</span></span><span class="state" id="state-cad">Off</span></label>
     </div>
   </header>
 
-  <!-- Sticky bar -->
   <div class="sticky-bar" aria-label="Controls that stay visible">
     <div class="row slider-wrap">
       <span id="smoothText" class="kbd">Smoothing: 0 s</span>
-      <input id="smoothSlider" class="range" type="range" min="0" max="100" step="1" value="0" />
+      <input id="smoothSlider" class="range" type="range" min="0" max="100" step="1" value="75" />
+    </div>
+    <div class="row" style="margin-top:6px">
+      <label class="chip"><input type="checkbox" id="toggle-trim" checked><span class="swatch" style="background:#4b5563"></span><span class="label">Trim Early Noise</span><span class="state" id="state-trim">On</span></label>
     </div>
     <div class="stats" id="stats"></div>
   </div>
@@ -181,9 +195,8 @@
     Privacy: Your file never leaves your device. If temperatures don’t appear automatically, use “Map Fields” to assign developer data fields to Core/Skin and optionally apply a scale (e.g., 0.01).
   </div>
 
-  <!-- Modal -->
   <div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="mapTitle">
-    <div class="modal">
+    <div class="modal" tabindex="-1">
       <h3 id="mapTitle">Map Developer Fields</h3>
       <p>Select which developer fields represent Core and Skin temperatures. Optionally set a scale (e.g., 0.01 if values are in centi-degrees).</p>
       <div class="row">
@@ -195,6 +208,10 @@
           <label for="coreScale">Core Scale</label>
           <input id="coreScale" type="number" step="0.0001" value="1" />
         </div>
+        <div class="col" style="width:120px">
+          <label for="coreOffset">Core Offset</label>
+          <input id="coreOffset" type="number" step="0.1" value="0" />
+        </div>
       </div>
       <div class="row" style="margin-top:8px">
         <div class="col" style="flex:1 1 220px">
@@ -204,6 +221,10 @@
         <div class="col" style="width:120px">
           <label for="skinScale">Skin Scale</label>
           <input id="skinScale" type="number" step="0.0001" value="1" />
+        </div>
+        <div class="col" style="width:120px">
+          <label for="skinOffset">Skin Offset</label>
+          <input id="skinOffset" type="number" step="0.1" value="0" />
         </div>
       </div>
       <div class="msg" id="mapHint"></div>
@@ -216,7 +237,6 @@
 
   <script>
     const textDecoder = new TextDecoder('utf-8');
-    const SMOOTH_MAX_SEC = 30;
 
     function clamp(v,min,max){return Math.max(min, Math.min(max, v));}
     function pad2(n){return n<10?'0'+n:''+n;}
@@ -233,7 +253,7 @@
       return (Math.round(sec*100)/100).toFixed(2) + ' s';
     }
     function fmtPace(minPerKm){
-      if (!isFinite(minPerKm) || minPerKm<=0) return '—';
+      if (!isFinite(minPerKm) || minPerKm<=0) return '--';
       const totalSec = minPerKm*60;
       const m = Math.floor(totalSec/60);
       const s = Math.round(totalSec % 60);
@@ -265,6 +285,55 @@
       1:'Garmin', 13:'SRAM', 15:'Zwift', 23:'Tacx', 32:'Wahoo', 38:'Stages',
       42:'Suunto', 70:'Hammerhead', 76:'Stages', 89:'Polar', 167:'COROS'
     };
+
+    function normalizeProductName(brand, name){
+      if (!name) return name;
+      const s = String(name).trim();
+      const lc = s.toLowerCase();
+      const brandLc = (brand||'').toLowerCase();
+      if (brandLc === 'garmin') {
+        // Forerunner: 'frXX', 'fr XX', 'forerunnerXX', 'forerunner XX' (+ optional 'Music')
+        const music = /music/i.test(s);
+        const fr = lc.match(/(?:^|\b)(?:fr|forerunner)\s*(\d{2,3})\b/);
+        if (fr && fr[1]) return `Forerunner ${fr[1]}${music ? ' Music' : ''}`;
+        // Edge: 'edge 530/830/1030, etc'
+        const edge = lc.match(/edge\s*(\d{3,4})\b/);
+        if (edge && edge[1]) return `Edge ${edge[1]}`;
+        // Venu: 'venu', 'venu 2', 'venu sq'
+        const venu2 = lc.match(/venu\s*(sq|2|2s|3|3s)?\b/);
+        if (venu2) {
+          const tag = venu2[1];
+          return `Venu${tag ? ' ' + tag.toUpperCase() : ''}`;
+        }
+        // Vivoactive
+        const va = lc.match(/vivoactive\s*(\d+|hr)?\b/);
+        if (va) {
+          const tag = va[1];
+          return `Vivoactive${tag ? ' ' + String(tag).toUpperCase() : ''}`;
+        }
+        // Instinct: 'instinct', 'instinct 2/2s'
+        const inst = lc.match(/instinct\s*(2s|2)?\b/);
+        if (inst) return `Instinct${inst[1] ? ' ' + inst[1].toUpperCase() : ''}`;
+        // Fenix (normalize diacritics)
+        const fenix = lc.match(/f[eē]nix\s*([0-9xXsS+\spro]+)?/);
+        if (fenix) {
+          const tag = fenix[1] ? fenix[1].replace(/\s+/g,' ').trim() : '';
+          return `Fenix${tag ? ' ' + tag.toUpperCase() : ''}`;
+        }
+        // Epix
+        const epix = lc.match(/epix\s*(gen\s*2|pro)?/);
+        if (epix) return `Epix${epix[1] ? ' ' + epix[1].replace(/\s+/g,' ').toUpperCase() : ''}`;
+        // MARQ
+        if (/\bmarq\b/i.test(s)) return 'MARQ';
+        // Descent
+        const descent = lc.match(/descent\s*([a-z0-9]+)?/);
+        if (descent) return `Descent${descent[1] ? ' ' + descent[1].toUpperCase() : ''}`;
+        // D2 (Aviation)
+        const d2 = lc.match(/\bd2\s*([a-z0-9]+)?/);
+        if (d2) return `D2${d2[1] ? ' ' + d2[1].toUpperCase() : ''}`;
+      }
+      return s;
+    }
 
     class FitParser {
       constructor() {
@@ -458,6 +527,11 @@
             const ex=this.devFieldDescriptions.get(matchedKey)||{};
             if (name) ex.name=name;
             if (units) ex.units=units;
+            // Capture scale/offset when provided (per FIT field_description: scale=6, offset=7)
+            const sc = obj.fields && typeof obj.fields[6] === 'number' ? obj.fields[6] : undefined;
+            const off = obj.fields && typeof obj.fields[7] === 'number' ? obj.fields[7] : undefined;
+            if (Number.isFinite(sc) && sc !== 0) ex.scale = sc;
+            if (Number.isFinite(off)) ex.offset = off;
             this.devFieldDescriptions.set(matchedKey, ex);
           }
         }
@@ -484,6 +558,9 @@
         this.yLeft = [20, 40];
         this.yRight = [50, 180];
 
+        this.elevSeries = [];
+        this.hsiBgSeries = [];
+
         this._bind();
         this.resize();
       }
@@ -494,7 +571,12 @@
         if (!ok(this.yLeft)) this.yLeft=[20,40];
         if (!ok(this.yRight)) this.yRight=[50,180];
       }
-      setSeries(series){ this.series = series || []; this._computeRanges(); this.draw(); }
+      setSeries(series, elevSeries = null){
+        this.series = series || [];
+        if (Array.isArray(elevSeries)) this.elevSeries = elevSeries;
+        this._computeRanges();
+        this.draw();
+      }
       resize(){
         const rect = this.canvas.getBoundingClientRect();
         const cssW = Math.max(1, rect.width);
@@ -587,6 +669,10 @@
           xMin = Math.min(xMin, s.points[0].x);
           xMax = Math.max(xMax, s.points[s.points.length-1].x);
         }
+        if (this.elevSeries && this.elevSeries.length){
+          xMin = Math.min(xMin, this.elevSeries[0].x);
+          xMax = Math.max(xMax, this.elevSeries[this.elevSeries.length-1].x);
+        }
         if (!isFinite(xMin) || !isFinite(xMax) || xMin===xMax) { xMin=0; xMax=1; }
         this.xRange = [xMin, xMax];
 
@@ -626,6 +712,137 @@
         const H = this.canvas.clientHeight || (this.canvas.height/this.dpr);
         return (H - this.margins.bottom) - ( (y - min) / Math.max(1e-9, (max-min)) ) * (H - this.margins.top - this.margins.bottom);
       }
+
+      _drawElevationBackground(){
+        if (!this.elevSeries || this.elevSeries.length < 2) return;
+
+        const [xMin, xMax] = this.xRange;
+        let emin = Infinity, emax = -Infinity;
+        for (const p of this.elevSeries){
+          if (p.x < xMin || p.x > xMax) continue;
+          if (Number.isFinite(p.y)) { emin = Math.min(emin, p.y); emax = Math.max(emax, p.y); }
+        }
+        if (!isFinite(emin) || !isFinite(emax) || emax - emin <= 1e-9) return;
+
+        const ctx = this.ctx;
+        const H = this.canvas.clientHeight || (this.canvas.height/this.dpr);
+        const plotTop = this.margins.top;
+        const plotBottom = H - this.margins.bottom;
+
+        const elevToY = (val)=>{
+          const t = (val - emin) / (emax - emin);
+          return plotBottom - t * (plotBottom - plotTop);
+        };
+
+        ctx.save();
+        ctx.beginPath();
+        let started = false;
+        let firstX = null;
+        let lastX = null;
+        for (let i=0;i<this.elevSeries.length;i++){
+          const p = this.elevSeries[i];
+          if (p.x < xMin || p.x > xMax || !Number.isFinite(p.y)) continue;
+          const x = this._sx(p.x);
+          const y = elevToY(p.y);
+          if (!started){ ctx.moveTo(x, y); started = true; firstX = x; }
+          else ctx.lineTo(x, y);
+          lastX = x;
+        }
+        if (started){
+          ctx.lineTo(lastX, plotBottom);
+          ctx.lineTo(firstX, plotBottom);
+          ctx.closePath();
+          ctx.fillStyle = getVar('--elev-fill', '#6b728029');
+          ctx.fill();
+
+          ctx.beginPath();
+          started = false;
+          const step = Math.max(1, Math.floor(this.elevSeries.length / 3000));
+          for (let i=0;i<this.elevSeries.length;i+=step){
+            const p = this.elevSeries[i];
+            if (p.x < xMin || p.x > xMax || !Number.isFinite(p.y)) continue;
+            const x = this._sx(p.x);
+            const y = elevToY(p.y);
+            if (!started){ ctx.moveTo(x, y); started = true; }
+            else ctx.lineTo(x, y);
+          }
+          ctx.strokeStyle = getVar('--elev-stroke', '#6b728066');
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      _drawHSIBackground(){
+        const hsiSeries = (this.series.find(s => s.id==='hsi') || {}).points || [];
+        if (!hsiSeries.length) return;
+
+        const [xMin, xMax] = this.xRange;
+        const ctx = this.ctx;
+        const W = this.canvas.clientWidth || (this.canvas.width/this.dpr);
+        const H = this.canvas.clientHeight || (this.canvas.height/this.dpr);
+        const plotLeft = this.margins.left;
+        const plotRight = W - this.margins.right;
+        const plotTop = this.margins.top;
+        const plotBottom = H - this.margins.bottom;
+
+        const zoneOf = (v)=> {
+          const c = clamp(v, 0, 5);
+          if (!Number.isFinite(c)) return null;
+          if (c <= 0.1) return null; // keep background white when HSI <= 0.1
+          if (c < 1) return 'green';
+          if (c < 2) return 'orange';
+          return 'red';
+        };
+        const colorOf = (zone)=>{
+          if (zone==='green') return getVar('--hsi-bg-green', '#2e7d321a');
+          if (zone==='orange') return getVar('--hsi-bg-orange', '#ef6c001a');
+          if (zone==='red') return getVar('--hsi-bg-red', '#e539351a');
+          return null;
+        };
+
+        let segments = [];
+        for (let i=0;i<hsiSeries.length-1;i++){
+          const p1 = hsiSeries[i], p2 = hsiSeries[i+1];
+          if (p2.x <= xMin || p1.x >= xMax) continue;
+          const x1 = Math.max(xMin, p1.x);
+          const x2 = Math.min(xMax, p2.x);
+          if (x2 <= x1) continue;
+          const z = zoneOf(p1.y);
+          if (!z) continue;
+          segments.push({x1, x2, zone:z});
+        }
+        if (!segments.length) return;
+
+        const merged = [];
+        let cur = null;
+        for (const s of segments){
+          if (!cur) cur = {...s};
+          else if (s.zone===cur.zone && Math.abs(s.x1 - cur.x2) < 1e-6) {
+            cur.x2 = s.x2;
+          } else {
+            merged.push(cur);
+            cur = {...s};
+          }
+        }
+        if (cur) merged.push(cur);
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(plotLeft, plotTop, plotRight - plotLeft, plotBottom - plotTop);
+        ctx.clip();
+
+        for (const s of merged){
+          const x1 = this._sx(s.x1);
+          const x2 = this._sx(s.x2);
+          const c = colorOf(s.zone);
+          if (!c) continue;
+          ctx.fillStyle = c;
+          ctx.fillRect(x1, plotTop, Math.max(0, x2 - x1), plotBottom - plotTop);
+        }
+        ctx.restore();
+      }
+
       draw(){
         this._ensureRanges();
 
@@ -638,56 +855,23 @@
         ctx.clearRect(0,0,this.canvas.width,this.canvas.height);
         ctx.setTransform(this.dpr,0,0,this.dpr,0,0);
 
-        ctx.strokeStyle = getVar('--grid','#2a2f37');
-        ctx.lineWidth = 1;
-
-        const [xMin,xMax]=this.xRange;
+        // Compute ticks once
+        const [xMin,xMax] = this.xRange;
         const xTicks = niceTicks(xMin, xMax, 6);
-        ctx.beginPath();
-        for (const tv of xTicks) {
-          const x = this._sx(tv);
-          ctx.moveTo(x, this.margins.top);
-          ctx.lineTo(x, H - this.margins.bottom);
-        }
-        ctx.stroke();
-
         const lTicks = niceTicks(this.yLeft[0], this.yLeft[1], 5);
-        ctx.beginPath();
-        for (const yv of lTicks) {
-          const y = this._syLeft(yv);
-          ctx.moveTo(this.margins.left, y);
-          ctx.lineTo(W - this.margins.right, y);
-        }
-        ctx.stroke();
-
-        ctx.fillStyle = '#9aa4b2';
-        ctx.font = '12px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        for (const tv of xTicks) {
-          const x = this._sx(tv);
-          ctx.fillText(fmtHMS(tv), x, H - this.margins.bottom + 6);
-        }
-
-        ctx.textAlign = 'right';
-        ctx.textBaseline = 'middle';
-        for (const yv of lTicks) {
-          const y = this._syLeft(yv);
-          ctx.fillText((Math.round(yv*10)/10).toFixed(1), this.margins.left - 6, y);
-        }
-
         const rTicks = niceTicks(this.yRight[0], this.yRight[1], 5);
-        ctx.textAlign = 'left';
-        for (const yv of rTicks) {
-          const y = this._syRight(yv);
-          ctx.fillText((Math.round(yv*10)/10).toFixed(1), W - this.margins.right + 6, y);
-        }
 
+        // Clip and draw backgrounds + series
         ctx.save();
         ctx.beginPath();
         ctx.rect(this.margins.left, this.margins.top, W - this.margins.left - this.margins.right, H - this.margins.top - this.margins.bottom);
         ctx.clip();
 
+        // Backgrounds
+        this._drawHSIBackground();
+        this._drawElevationBackground();
+
+        // Series lines
         for (const s of this.series) {
           if (!s || !s.visible || !s.points || s.points.length===0) continue;
           ctx.strokeStyle = s.color;
@@ -707,6 +891,7 @@
           ctx.stroke();
         }
 
+        // Selection rectangle
         if (this.dragging) {
           const x1 = this.selStartPx, x2 = this.selEndPx;
           const left = Math.min(x1,x2), right = Math.max(x1,x2);
@@ -717,9 +902,10 @@
           ctx.beginPath(); ctx.rect(left, top, right-left, bottom-top); ctx.fill(); ctx.stroke();
         }
 
+        // Tooltip/crosshair
         if (this.tooltip.active && !this.dragging) {
           const xPix = this.tooltip.x;
-          ctx.strokeStyle = '#ffffff33';
+          ctx.strokeStyle = '#00000033';
           ctx.lineWidth = 1;
           ctx.beginPath();
           ctx.moveTo(xPix, this.margins.top);
@@ -742,18 +928,61 @@
             const Wc = this.canvas.clientWidth || (this.canvas.width/this.dpr);
             if (bx + bw > Wc - 4) bx = xPix - 8 - bw;
             if (bx < 4) bx = 4;
-            ctx.fillStyle = '#0b0f14f2';
-            ctx.strokeStyle = '#2a313b';
+            ctx.fillStyle = '#ffffffee';
+            ctx.strokeStyle = '#cbd5e1';
             ctx.lineWidth = 1;
             ctx.beginPath(); ctx.rect(bx, by, bw, bh); ctx.fill(); ctx.stroke();
-            ctx.fillStyle = '#e5e9f0';
+            ctx.fillStyle = '#111827';
             for (let i=0;i<lines.length;i++){
               ctx.fillText(lines[i], bx+pad, by+pad+ (i*16));
             }
           }
         }
 
-        ctx.restore();
+        ctx.restore(); // end clip
+
+        // Grid lines
+        ctx.strokeStyle = getVar('--grid','#2a2f37');
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (const tv of xTicks) {
+          const x = this._sx(tv);
+          ctx.moveTo(x, this.margins.top);
+          ctx.lineTo(x, H - this.margins.bottom);
+        }
+        ctx.stroke();
+
+        ctx.beginPath();
+        for (const yv of lTicks) {
+          const y = this._syLeft(yv);
+          ctx.moveTo(this.margins.left, y);
+          ctx.lineTo(W - this.margins.right, y);
+        }
+        ctx.stroke();
+
+        // Axis labels
+        ctx.fillStyle = '#475569';
+        ctx.font = '12px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        for (const tv of xTicks) {
+          const x = this._sx(tv);
+          ctx.fillText(fmtHMS(tv), x, H - this.margins.bottom + 6);
+        }
+
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        for (const yv of lTicks) {
+          const y = this._syLeft(yv);
+          ctx.fillText((Math.round(yv*10)/10).toFixed(1), this.margins.left - 6, y);
+        }
+
+        ctx.textAlign = 'left';
+        for (const yv of rTicks) {
+          const y = this._syRight(yv);
+          ctx.fillText((Math.round(yv*10)/10).toFixed(1), W - this.margins.right + 6, y);
+        }
+
         ctx.restore();
       }
       _updateTooltipNearest(){
@@ -814,10 +1043,31 @@
       dist: document.getElementById('toggle-dist'),
       pace: document.getElementById('toggle-pace'),
       cad:  document.getElementById('toggle-cad'),
+      trim: document.getElementById('toggle-trim'),
     };
-    for (const el of Object.values(toggles)) {
-      el.addEventListener('change', ()=>{ renderChart(); updateStatsUI(); });
+
+    const toggleStates = {
+      hr:   document.getElementById('state-hr'),
+      core: document.getElementById('state-core'),
+      skin: document.getElementById('state-skin'),
+      hsi:  document.getElementById('state-hsi'),
+      dist: document.getElementById('state-dist'),
+      pace: document.getElementById('state-pace'),
+      cad:  document.getElementById('state-cad'),
+      trim: document.getElementById('state-trim'),
+    };
+
+    function refreshToggleStates(){
+      for (const [key, el] of Object.entries(toggleStates)) {
+        const on = !!toggles[key]?.checked;
+        if (el) el.textContent = on ? 'On' : 'Off';
+      }
     }
+
+    for (const el of Object.values(toggles)) {
+      el.addEventListener('change', ()=>{ refreshToggleStates(); renderChart(); updateStatsUI(); });
+    }
+    refreshToggleStates();
 
     let current = {
       records: [],
@@ -825,6 +1075,7 @@
       fileIds: [],
       deviceInfos: [],
       fileCreators: [],
+      manufacturer: null,
 
       baseTime: 0,
 
@@ -835,6 +1086,7 @@
       distRaw: [],
       paceRaw: [],
       cadRaw:  [],
+      elevRaw: [],
 
       hrSeries:   [],
       coreSeries: [],
@@ -843,11 +1095,14 @@
       distSeries: [],
       paceSeries: [],
       cadSeries:  [],
+      elevSeries: [],
 
       coreKey: null,
       skinKey: null,
       coreScale: 1,
       skinScale: 1,
+      coreOffset: 0,
+      skinOffset: 0,
 
       tauSec: 0,
       cutoffX: 0,
@@ -900,15 +1155,15 @@
       current = {
         records: [], devDesc: new Map(), fileIds: [], deviceInfos: [], fileCreators: [],
         baseTime: 0,
-        hrRaw: [], coreRaw: [], skinRaw: [], hsiRaw: [], distRaw: [], paceRaw: [], cadRaw: [],
-        hrSeries: [], coreSeries: [], skinSeries: [], hsiSeries: [], distSeries: [], paceSeries: [], cadSeries: [],
-        coreKey: null, skinKey: null, coreScale: 1, skinScale: 1,
+        hrRaw: [], coreRaw: [], skinRaw: [], hsiRaw: [], distRaw: [], paceRaw: [], cadRaw: [], elevRaw: [],
+        hrSeries: [], coreSeries: [], skinSeries: [], hsiSeries: [], distSeries: [], paceSeries: [], cadSeries: [], elevSeries: [],
+        coreKey: null, skinKey: null, coreScale: 1, skinScale: 1, coreOffset: 0, skinOffset: 0,
         tauSec: 0, cutoffX: 0, selection: null, zoomMode: false
       };
       chart.setZoomMode(false);
-      smoothSlider.value = "0";
-      setSmoothingUI(0);
-      chart.setSeries([]);
+      smoothSlider.value = "75";
+      setSmoothingUI(sliderToTau(75));
+      chart.setSeries([], []);
     });
 
     chart.onSelectRange = (range)=>{
@@ -941,6 +1196,11 @@
         current.fileIds = fileIds;
         current.deviceInfos = deviceInfos;
         current.fileCreators = fileCreators;
+        current.manufacturer = (function(){
+          const pick = (deviceInfos&&deviceInfos[0]) ? deviceInfos[0] : (fileIds&&fileIds[0]);
+          const f = (pick && pick.fields) || {};
+          return (typeof f[2] === 'number') ? f[2] : null;
+        })();
 
         deviceNameEl.textContent = computeDeviceStringFromCreator(deviceInfos, fileIds, fileCreators);
 
@@ -965,6 +1225,7 @@
         const distKmRaw = [];
         const paceRaw = [];
         const cadRaw = [];
+        const elevRaw = [];
 
         let prevDcm = null;
         let prevT = null;
@@ -976,7 +1237,11 @@
           if (typeof hr === 'number' && hr>0 && hr<255) hrRaw.push({x:t, y:hr});
 
           const c = r.fields[4];
-          if (typeof c === 'number' && isFinite(c)) cadRaw.push({x:t, y: c*2});
+          if (typeof c === 'number' && isFinite(c)) {
+            let cadVal = c;
+            if (current.manufacturer === 1) cadVal = c * 2; // Garmin cadence in steps/stride -> spm
+            cadRaw.push({x:t, y: cadVal});
+          }
 
           const dRaw = r.fields[5];
           if (typeof dRaw === 'number' && isFinite(dRaw)) {
@@ -984,14 +1249,28 @@
             distKmRaw.push({x:t, y:dKm});
           }
 
-          // Pace from enhanced_speed (preferred), else speed, else distance delta
-          const enhancedSpeed = r.fields[114] ?? r.fields[134]; // common locations for enhanced_speed
-          const speed = r.fields[6];                            // speed (m/s)
+          // Pace: prefer field 6 (speed) when reliable; otherwise try field 134; otherwise distance delta
+          const rawEnh134 = r.fields[134];
+          const rawSpeed = r.fields[6]; // may be scaled
           let pace = NaN;
-          const fromSpeed = (v)=> (typeof v==='number' && isFinite(v) && v>0.05) ? (1000/v)/60 : NaN;
 
-          if (enhancedSpeed !== undefined) pace = fromSpeed(enhancedSpeed);
-          if (!isFinite(pace) && speed !== undefined) pace = fromSpeed(speed);
+          const decodeSpeed = (v)=>{
+            if (typeof v !== 'number' || !isFinite(v)) return NaN;
+            if (v > 25) return v/1000; // scaled by 1000
+            return v;
+          };
+          const fromSpeed = (v)=>{
+            const s = decodeSpeed(v);
+            return (typeof s==='number' && isFinite(s) && s>0.05) ? (1000/s)/60 : NaN;
+          };
+
+          // Use field 6 first if plausible (>0.05 m/s)
+          if (rawSpeed !== undefined) pace = fromSpeed(rawSpeed);
+          // Else try field 134, but only if plausible
+          if (!isFinite(pace) && rawEnh134 !== undefined) {
+            const s134 = decodeSpeed(rawEnh134);
+            if (isFinite(s134) && s134>0.05) pace = (1000/s134)/60;
+          }
 
           if (!isFinite(pace)) {
             if (typeof dRaw === 'number' && isFinite(dRaw) && prevDcm!=null && prevT!=null) {
@@ -1005,6 +1284,12 @@
           }
           paceRaw.push({x:t, y: isFinite(pace) ? pace : NaN});
 
+          // Enhanced altitude (meters, can be negative)
+          const enhancedAlt = r.fields[78];
+          if (typeof enhancedAlt === 'number' && isFinite(enhancedAlt)) {
+            elevRaw.push({x:t, y: enhancedAlt});
+          }
+
           if (typeof dRaw === 'number' && isFinite(dRaw)) { prevDcm = dRaw; prevT = t; }
         }
         current.hrRaw = hrRaw;
@@ -1014,10 +1299,50 @@
 
         // Developer fields: Core/Skin temps
         const allDevKeys = new Set();
-        for (const r of records) for (const k in r.dev) allDevKeys.add(k);
+        for (const rec of records) for (const k in rec.dev) allDevKeys.add(k);
         const candidates = Array.from(allDevKeys);
 
         let coreKey = null, skinKey = null;
+
+        // COROS specific: standard record field 139 appears to be core temp in centi-deg C
+        // If manufacturer is COROS (167), build a coreRaw from field 139 / 100, and search for a skin-like field ~6-10C lower.
+        if (current.manufacturer === 167) {
+          const core139 = [];
+          for (const r of records) {
+            const v = r.fields[139];
+            if (typeof v === 'number' && isFinite(v)) core139.push({x:r._elapsed, y:v/100});
+          }
+          if (core139.length) {
+            // Try to find another field with similar trajectory ~6-10C lower (median diff in that range), prefer stable/close track
+            function seriesForField(fid){
+              const arr=[]; for (const r of records){ const v=r.fields[fid]; if (typeof v==='number'&&isFinite(v)) arr.push({x:r._elapsed,y:v}); }
+              return arr;
+            }
+            function median(xs){ const a=xs.filter(Number.isFinite).slice().sort((a,b)=>a-b); if (!a.length) return NaN; const m=Math.floor(a.length/2); return a.length%2? a[m] : (a[m-1]+a[m])/2; }
+            function alignAndDiff(a,b,scaleB=1){
+              let i=0,j=0; const diffs=[]; while (i<a.length && j<b.length){ const ax=a[i].x, bx=b[j].x; if (Math.abs(ax-bx)<1e-6){ diffs.push(a[i].y - b[j].y*scaleB); i++; j++; } else if (ax<bx) i++; else j++; }
+              return diffs;
+            }
+            let bestFid=null, bestScore=-Infinity;
+            for (const fid of Object.keys(records[0]?.fields||{})){
+              const id = Number(fid); if (!Number.isFinite(id) || id===139) continue;
+              const rawB = seriesForField(id); if (rawB.length < core139.length*0.5) continue;
+              const diffs = alignAndDiff(core139, rawB, 1/100); // treat candidate as centi-deg by default
+              if (diffs.length < core139.length*0.3) continue;
+              const md = median(diffs);
+              if (!Number.isFinite(md)) continue;
+              // Score: prefer 6-10 C lower than core, small MAD (not implemented), many samples
+              const gap = Math.abs((md) - 8); // target ~8C
+              const score = -gap + diffs.length*1e-4;
+              if (score > bestScore) { bestScore=score; bestFid=id; }
+            }
+            if (bestFid!=null) {
+              const skinSeries=[]; for (const r of records){ const v=r.fields[bestFid]; if (typeof v==='number'&&isFinite(v)) skinSeries.push({x:r._elapsed,y:v/100}); }
+              current.coreRaw = core139;
+              current.skinRaw = skinSeries;
+            }
+          }
+        }
         function descFor(k){ return devFieldDescriptions.get(k) || {}; }
         function looksLikeCore(d){ return d && d.name && /core/i.test(d.name); }
         function looksLikeSkin(d){ return d && d.name && /skin/i.test(d.name); }
@@ -1031,9 +1356,15 @@
         function seriesFromKey(key){
           if (!key) return [];
           const arr=[];
-          for (const r of records) {
-            const v = r.dev[key];
-            if (typeof v === 'number' && isFinite(v)) arr.push({x:r._elapsed, y:v});
+          const desc = devFieldDescriptions.get(key) || {};
+          const scaleFromDesc = (Number.isFinite(desc.scale) && desc.scale!==0) ? desc.scale : 1;
+          const offsetFromDesc = Number.isFinite(desc.offset) ? desc.offset : 0;
+          for (const rec of records) {
+            const v = rec.dev[key];
+            if (typeof v === 'number' && isFinite(v)) {
+              const y = v * scaleFromDesc + offsetFromDesc;
+              arr.push({x:rec._elapsed, y});
+            }
           }
           return arr;
         }
@@ -1042,39 +1373,40 @@
         for (const k of candidates) devSeriesByKey.set(k, seriesFromKey(k));
 
         function guessTempKey(excludeKey=null){
-          let bestKey=null, bestScore=-Infinity, bestScale=1;
+          let bestKey=null, bestScore=-Infinity, bestScale=1, bestOffset=0;
           for (const k of candidates) {
             if (k===excludeKey) continue;
             const arr = devSeriesByKey.get(k);
             if (!arr || arr.length<5) continue;
             const ys = arr.map(p=>p.y).filter(Number.isFinite).slice().sort((a,b)=>a-b);
             const mid = ys[Math.floor(ys.length/2)];
-            let score = -Math.abs(mid-37); let scale=1;
-            if (mid>60){ const m2=mid/100; const s2=-Math.abs(m2-37); if (s2>score){score=s2; scale=0.01;} }
+            let score = -Math.abs(mid-37); let scale=1; let offset=0;
             const d = descFor(k);
+            if (Number.isFinite(d.scale) && d.scale !== 0) scale = d.scale;
+            if (Number.isFinite(d.offset)) offset = d.offset;
             if (unitsC(d)) score += 2;
             if (looksLikeCore(d) || looksLikeSkin(d)) score += 1;
-            if (score > bestScore) {bestScore=score; bestKey=k; bestScale=scale;}
+            if (score > bestScore) {bestScore=score; bestKey=k; bestScale=scale; bestOffset=offset;}
           }
-          return {key:bestKey, scale:bestScale};
+          return {key:bestKey, scale:bestScale, offset:bestOffset};
         }
-        if (!coreKey) { const g = guessTempKey(null); coreKey = g.key; current.coreScale = g.scale || 1; }
-        if (!skinKey) { const g = guessTempKey(coreKey); skinKey = g.key; current.skinScale = g.scale || 1; }
+        if (!coreKey) { const g = guessTempKey(null); coreKey = g.key; current.coreScale = g.scale || 1; current.coreOffset = g.offset || 0; }
+        if (!skinKey) { const g = guessTempKey(coreKey); skinKey = g.key; current.skinScale = g.scale || 1; current.skinOffset = g.offset || 0; }
 
-        function scaledSeries(key, scale=1){
+        function scaledSeries(key, scale=1, offset=0){
           if (!key) return [];
           const arr = [];
-          for (const r of records) {
-            const v = r.dev[key];
+          for (const rec of records) {
+            const v = rec.dev[key];
             if (typeof v === 'number' && isFinite(v)) {
-              const y = v*scale;
-              if (y > -1000 && y < 1000) arr.push({x:r._elapsed, y});
+              const y = v*scale + offset;
+              if (y > -1000 && y < 1000) arr.push({x:rec._elapsed, y});
             }
           }
           return arr;
         }
-        let coreRaw = scaledSeries(coreKey, current.coreScale);
-        let skinRaw = scaledSeries(skinKey, current.skinScale);
+        let coreRaw = scaledSeries(coreKey, current.coreScale, current.coreOffset||0);
+        let skinRaw = scaledSeries(skinKey, current.skinScale, current.skinOffset||0);
 
         function adjustIfNeeded(series){
           if (!series.length) return {series, scale:1};
@@ -1084,22 +1416,35 @@
           if (mid < 5 && mid > 0.05) return {series: series.map(p=>({x:p.x,y:p.y*10})), scale:10};
           return {series, scale:1};
         }
-        if (!coreRaw.length && coreKey) { const alt = adjustIfNeeded(seriesFromKey(coreKey)); coreRaw = alt.series; current.coreScale *= alt.scale; }
-        if (!skinRaw.length && skinKey) { const alt = adjustIfNeeded(seriesFromKey(skinKey)); skinRaw = alt.series; current.skinScale *= alt.scale; }
+        if (!coreRaw.length && coreKey) { const alt = adjustIfNeeded(seriesFromKey(coreKey)); coreRaw = alt.series; current.coreScale *= alt.scale; /* offset remains user-controlled */ }
+        if (!skinRaw.length && skinKey) { const alt = adjustIfNeeded(seriesFromKey(skinKey)); skinRaw = alt.series; current.skinScale *= alt.scale; /* offset remains user-controlled */ }
 
         current.coreKey = coreKey || null;
         current.skinKey = skinKey || null;
         current.coreRaw = coreRaw;
         current.skinRaw = skinRaw;
 
+        // HSI detection: "heat strain index"
         const hsiKey = detectHSIKey(devFieldDescriptions);
         current.hsiRaw = [];
         if (hsiKey) {
-          for (const r of records) {
-            const v = r.dev[hsiKey];
-            if (typeof v === 'number' && isFinite(v)) current.hsiRaw.push({x:r._elapsed, y:v});
+          for (const rec of records) {
+            const v = rec.dev[hsiKey];
+            if (typeof v === 'number' && isFinite(v)) current.hsiRaw.push({x:rec._elapsed, y:clamp(v, 0, 5)});
           }
         }
+
+        // If no base enhanced_altitude, try dev field by name
+        if (!elevRaw.length) {
+          const elevKey = detectEnhancedAltitudeDevKey(devFieldDescriptions);
+          if (elevKey) {
+            for (const rec of records) {
+              const v = rec.dev[elevKey];
+              if (typeof v === 'number' && isFinite(v)) elevRaw.push({x:rec._elapsed, y:v});
+            }
+          }
+        }
+        current.elevRaw = elevRaw;
 
         const tau = sliderToTau(smoothSlider.value);
         setSmoothingUI(tau);
@@ -1117,7 +1462,8 @@
         if (!current.hrRaw.length) parts.push('No heart rate found.');
         if (!current.coreRaw.length) parts.push('Core temp not auto-detected. Use “Map Fields”.');
         if (!current.skinRaw.length) parts.push('Skin temp not auto-detected. Use “Map Fields”.');
-        if (!current.hsiRaw.length) parts.push('Heat Strain Index not found (developer field).');
+        if (!current.hsiRaw.length) parts.push('Heat Strain Index not found (developer field “heat strain index”).');
+        if (!current.elevRaw.length) parts.push('Enhanced altitude not found; elevation background will be hidden.');
         messageEl.textContent = parts.join(' ');
 
         mapBtn.disabled = (candidates.length === 0);
@@ -1129,9 +1475,20 @@
 
     function detectHSIKey(devDesc){
       for (const [k, d] of devDesc.entries()) {
-        const name = (d.name||'').toLowerCase();
+        const name = (d.name||'').toLowerCase().trim();
         if (!name) continue;
+        if (name === 'heat strain index') return k;
         if ((name.includes('heat') && name.includes('strain')) || name.includes('hsi')) return k;
+      }
+      return null;
+    }
+
+    function detectEnhancedAltitudeDevKey(devDesc){
+      for (const [k, d] of devDesc.entries()) {
+        const nm = (d.name||'').toLowerCase().trim();
+        if (!nm) continue;
+        if (nm === 'enhanced altitude') return k;
+        if (nm.includes('enhanced') && nm.includes('altitude')) return k;
       }
       return null;
     }
@@ -1176,6 +1533,7 @@
       current.distSeries = smoothZeroPhase(current.distRaw, tau);
       current.paceSeries = smoothZeroPhase(current.paceRaw, tau);
       current.cadSeries  = smoothZeroPhase(current.cadRaw,  tau);
+      current.elevSeries = smoothZeroPhase(current.elevRaw, Math.min(10, tau || 3));
     }
 
     function updateCutoff(){
@@ -1190,7 +1548,9 @@
     }
 
     function inView(x){
-      if (x < current.cutoffX) return false;
+      if (toggles.trim && toggles.trim.checked) {
+        if (x < current.cutoffX) return false;
+      }
       if (current.selection) {
         if (x < current.selection[0] || x > current.selection[1]) return false;
       }
@@ -1204,12 +1564,13 @@
         { id:'skin', name:'Skin Temp',  color:getVar('--skin','#fb8c00'), axis:'left',  visible: toggles.skin.checked, points: filterPoints(current.skinSeries), fmt:(v)=> `${(Math.round(v*100)/100).toFixed(2)} °C` },
 
         { id:'hr',   name:'Heart Rate', color:getVar('--hr','#e53935'),   axis:'right', visible: toggles.hr.checked,   points: filterPoints(current.hrSeries),   fmt:(v)=> `${Math.round(v)} bpm` },
-        { id:'hsi',  name:'HSI',        color:getVar('--hsi','#ab47bc'),  axis:'right', visible: toggles.hsi.checked,  points: filterPoints(current.hsiSeries),  fmt:(v)=> Number.isFinite(v)? (Math.round(v*100)/100).toFixed(2):'—' },
-        { id:'dist', name:'Distance',   color:getVar('--dist','#66bb6a'), axis:'right', visible: toggles.dist.checked, points: filterPoints(current.distSeries), fmt:(v)=> Number.isFinite(v)? (Math.round(v*100)/100).toFixed(2)+' km':'—' },
+        { id:'hsi',  name:'HSI',        color:getVar('--hsi','#ab47bc'),  axis:'right', visible: toggles.hsi.checked,  points: filterPoints(current.hsiSeries),  fmt:(v)=> Number.isFinite(v)? (Math.round(v*100)/100).toFixed(2):'--' },
+        { id:'dist', name:'Distance',   color:getVar('--dist','#66bb6a'), axis:'right', visible: toggles.dist.checked, points: filterPoints(current.distSeries), fmt:(v)=> Number.isFinite(v)? (Math.round(v*100)/100).toFixed(2)+' km':'--' },
         { id:'pace', name:'Pace',       color:getVar('--pace','#26c6da'), axis:'right', visible: toggles.pace.checked, points: filterPoints(current.paceSeries), fmt:(v)=> fmtPace(v) },
-        { id:'cad',  name:'Cadence',    color:getVar('--cad','#ffd54f'),  axis:'right', visible: toggles.cad.checked,  points: filterPoints(current.cadSeries),  fmt:(v)=> Number.isFinite(v)? Math.round(v)+' spm':'—' },
+        { id:'cad',  name:'Cadence',    color:getVar('--cad','#ffd54f'),  axis:'right', visible: toggles.cad.checked,  points: filterPoints(current.cadSeries),  fmt:(v)=> Number.isFinite(v)? Math.round(v)+' spm':'--' },
       ];
-      chart.setSeries(series);
+      const elev = filterPoints(current.elevSeries);
+      chart.setSeries(series, elev);
     }
 
     function arrayMaxInView(arr){
@@ -1222,53 +1583,71 @@
       return (m===-Infinity) ? null : m;
     }
 
+    function arrayMinInView(arr){
+      if (!arr || !arr.length) return null;
+      let m = Infinity;
+      for (const p of arr) {
+        if (!inView(p.x)) continue;
+        if (Number.isFinite(p.y)) m = Math.min(m, p.y);
+      }
+      return (m===Infinity) ? null : m;
+    }
+
     function updateStatsUI(){
       const hrMax   = arrayMaxInView(current.hrRaw);
       const coreMax = arrayMaxInView(current.coreRaw);
       const skinMax = arrayMaxInView(current.skinRaw);
 
       const parts = [
-        `<span>Max Core: <span class="kbd">${coreMax!=null ? (Math.round(coreMax*100)/100).toFixed(2)+' °C' : '—'}</span></span>`,
-        `<span>Max Skin: <span class="kbd">${skinMax!=null ? (Math.round(skinMax*100)/100).toFixed(2)+' °C' : '—'}</span></span>`,
-        `<span>Max HR: <span class="kbd">${hrMax!=null ? Math.round(hrMax)+' bpm' : '—'}</span></span>`,
+        `<span>Max Core: <span class="kbd">${coreMax!=null ? (Math.round(coreMax*100)/100).toFixed(2)+' °C' : '--'}</span></span>`,
+        `<span>Max Skin: <span class="kbd">${skinMax!=null ? (Math.round(skinMax*100)/100).toFixed(2)+' °C' : '--'}</span></span>`,
+        `<span>Max HR: <span class="kbd">${hrMax!=null ? Math.round(hrMax)+' bpm' : '--'}</span></span>`,
         `<span>Window: <span class="kbd">${fmtHMS(viewDuration())}</span></span>`
       ];
 
       if (toggles.hsi.checked) {
         const h = arrayMaxInView(current.hsiRaw);
-        parts.push(`<span>Max HSI: <span class="kbd">${h!=null ? (Math.round(h*100)/100).toFixed(2) : '—'}</span></span>`);
+        parts.push(`<span>Max HSI: <span class="kbd">${h!=null ? (Math.round(h*100)/100).toFixed(2) : '--'}</span></span>`);
       }
       if (toggles.dist.checked) {
         const d = arrayMaxInView(current.distRaw);
-        parts.push(`<span>Max Distance: <span class="kbd">${d!=null ? (Math.round(d*100)/100).toFixed(2)+' km' : '—'}</span></span>`);
+        parts.push(`<span>Max Distance: <span class="kbd">${d!=null ? (Math.round(d*100)/100).toFixed(2)+' km' : '--'}</span></span>`);
       }
       if (toggles.pace.checked) {
-        const p = arrayMaxInView(current.paceRaw);
-        parts.push(`<span>Max Pace: <span class="kbd">${p!=null ? fmtPace(p) : '—'}</span></span>`);
+        const p = arrayMinInView(current.paceRaw);
+        parts.push(`<span>Best Pace: <span class="kbd">${p!=null ? fmtPace(p) : '--'}</span></span>`);
       }
       if (toggles.cad.checked) {
         const c = arrayMaxInView(current.cadRaw);
-        parts.push(`<span>Max Cadence: <span class="kbd">${c!=null ? Math.round(c)+' spm' : '—'}</span></span>`);
+        parts.push(`<span>Max Cadence: <span class="kbd">${c!=null ? Math.round(c)+' spm' : '--'}</span></span>`);
       }
 
       statsEl.innerHTML = parts.join(' ');
     }
 
     function viewDuration(){
-      let start = current.cutoffX;
+      let start = (toggles.trim && toggles.trim.checked) ? current.cutoffX : 0;
       let end = (current.records.length ? current.records[current.records.length-1]._elapsed : 0);
-      if (current.selection) { start = Math.max(start, current.selection[0]); end = Math.min(end, current.selection[1]); }
+      if (current.selection) {
+        start = Math.max(start, current.selection[0]);
+        end = Math.min(end, current.selection[1]);
+      }
       return Math.max(0, end - start);
     }
 
     const modalBackdrop = document.getElementById('modalBackdrop');
+    const modalEl = document.querySelector('.modal');
     const coreSelect = document.getElementById('coreSelect');
     const skinSelect = document.getElementById('skinSelect');
     const coreScaleInput = document.getElementById('coreScale');
     const skinScaleInput = document.getElementById('skinScale');
+    const coreOffsetInput = document.getElementById('coreOffset');
+    const skinOffsetInput = document.getElementById('skinOffset');
     const cancelMap = document.getElementById('cancelMap');
     const applyMap = document.getElementById('applyMap');
     const mapHint = document.getElementById('mapHint');
+
+    let lastFocusEl = null;
 
     mapBtn.addEventListener('click', ()=>{
       const devKeys = getAllDeveloperKeys(current.records);
@@ -1291,29 +1670,42 @@
       if (current.skinKey) skinSelect.value = current.skinKey;
       coreScaleInput.value = String(current.coreScale || 1);
       skinScaleInput.value = String(current.skinScale || 1);
+      coreOffsetInput.value = String(current.coreOffset || 0);
+      skinOffsetInput.value = String(current.skinOffset || 0);
       mapHint.innerHTML = sampleHintHTML(current.records, devKeys);
+
+      lastFocusEl = document.activeElement;
       modalBackdrop.style.display = 'flex';
+      setTimeout(()=>{ modalEl.focus(); }, 0);
     });
 
-    cancelMap.addEventListener('click', ()=> { modalBackdrop.style.display='none'; });
+    function closeModal(){
+      modalBackdrop.style.display='none';
+      if (lastFocusEl && typeof lastFocusEl.focus === 'function') lastFocusEl.focus();
+    }
+
+    cancelMap.addEventListener('click', closeModal);
 
     applyMap.addEventListener('click', ()=>{
       const coreKey = coreSelect.value || null;
       const skinKey = skinSelect.value || null;
       let coreScale = parseFloat(coreScaleInput.value); if (!Number.isFinite(coreScale) || coreScale===0) coreScale = 1;
       let skinScale = parseFloat(skinScaleInput.value); if (!Number.isFinite(skinScale) || skinScale===0) skinScale = 1;
+      let coreOffset = parseFloat(coreOffsetInput.value); if (!Number.isFinite(coreOffset)) coreOffset = 0;
+      let skinOffset = parseFloat(skinOffsetInput.value); if (!Number.isFinite(skinOffset)) skinOffset = 0;
 
       current.coreKey = coreKey; current.skinKey = skinKey;
       current.coreScale = coreScale; current.skinScale = skinScale;
+      current.coreOffset = coreOffset; current.skinOffset = skinOffset;
 
       const coreRaw = [];
       const skinRaw = [];
       for (const r of current.records) {
         if (coreKey && typeof r.dev[coreKey] === 'number' && isFinite(r.dev[coreKey])) {
-          coreRaw.push({x:r._elapsed, y:r.dev[coreKey]*coreScale});
+          coreRaw.push({x:r._elapsed, y:r.dev[coreKey]*coreScale + coreOffset});
         }
         if (skinKey && typeof r.dev[skinKey] === 'number' && isFinite(r.dev[skinKey])) {
-          skinRaw.push({x:r._elapsed, y:r.dev[skinKey]*skinScale});
+          skinRaw.push({x:r._elapsed, y:r.dev[skinKey]*skinScale + skinOffset});
         }
       }
       current.coreRaw = coreRaw;
@@ -1330,7 +1722,23 @@
       if (!skinRaw.length) parts.push('No skin temp points with this mapping.');
       messageEl.textContent = parts.join(' ');
 
-      modalBackdrop.style.display='none';
+      closeModal();
+    });
+
+    modalBackdrop.addEventListener('keydown', (e)=>{
+      if (e.key === 'Escape') { e.preventDefault(); closeModal(); }
+      if (e.key === 'Tab') {
+        // simple focus trap: keep focus within modal
+        const focusables = modalBackdrop.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        const list = Array.from(focusables).filter(el=> el.offsetParent !== null);
+        if (list.length === 0) return;
+        const first = list[0], last = list[list.length-1];
+        if (e.shiftKey) {
+          if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+        } else {
+          if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+        }
+      }
     });
 
     function getAllDeveloperKeys(records){
@@ -1344,7 +1752,7 @@
       const name = desc?.name ? desc.name : 'Field ' + key;
       const units = desc?.units ? ' ' + desc.units : '';
       const val = (sample!=null) ? ` [ex: ${Math.round(sample*100)/100}]` : '';
-      return name + (units ? ` (${units.trim()})` : '') + ' — ' + key + val;
+      return name + (units ? ` (${units.trim()})` : '') + ' -- ' + key + val;
     }
 
     function sampleHintHTML(records, devKeys){
@@ -1367,13 +1775,14 @@
       }
       if (!picked && deviceInfos && deviceInfos.length) picked = deviceInfos[0];
 
-      let manuf = null, product = null, serial = null, sw = null;
+      let manuf = null, product = null, serial = null, sw = null, productName = null; let productStr = null;
       if (picked) {
         const f = picked.fields||{};
         manuf = f[2];
         product = f[4];
         serial = f[3];
         sw = f[5];
+        if (typeof f[27] === 'string' && f[27].trim()) productName = f[27].trim(); // product_name
       }
       if ((manuf==null || product==null || serial==null) && fileIds && fileIds.length) {
         const f = fileIds[0].fields||{};
@@ -1385,16 +1794,55 @@
         const fc = fileCreators[0].fields||{};
         if (typeof fc[0] === 'number') {
           sw = fc[0];
-          if (sw >= 1000 && Number.isInteger(sw)) sw = sw/100;
         }
       }
+      // Normalize sw to xx.yy by dividing by 100 when numeric
+      if (typeof sw === 'number') sw = sw/100;
 
       const brandStr = (typeof manuf === 'number' && MANUFACTURERS[manuf]) ? MANUFACTURERS[manuf] : (manuf!=null ? String(manuf) : 'Unknown');
-      const prodStr = (product!=null ? String(product) : 'Unknown');
-      let swStr = (sw!=null) ? String(sw) : '—';
-      if (typeof sw === 'number' && sw % 1 !== 0) swStr = (Math.round(sw*100)/100).toFixed(2);
-      const serialStr = (serial!=null ? String(serial) : '—');
-      return `${brandStr} ${prodStr} (sw version = ${swStr}, serial= ${serialStr})`;
+
+      // Prefer product_name string if available (e.g., 'fr55'), with normalization
+      let prodStr = productName || null;
+      if (!prodStr) {
+        // Fallback to numeric code (product ID)
+        if (brandStr === 'Garmin' && product!=null) {
+          const garminMap = {
+            // Common Forerunners (subset; extend as needed)
+            2691: 'Forerunner 45', 2693: 'Forerunner 45S',
+            3869: 'Forerunner 55',
+            2713: 'Forerunner 245', 2729: 'Forerunner 245 Music',
+            3315: 'Forerunner 255', 3321: 'Forerunner 255S', 3329: 'Forerunner 255 Music',
+            2711: 'Forerunner 645', 2712: 'Forerunner 645 Music',
+            3510: 'Forerunner 745',
+            2710: 'Forerunner 935',
+            3284: 'Forerunner 945', 3512: 'Forerunner 945 LTE',
+            4000: 'Forerunner 955', 4015: 'Forerunner 965',
+            // Fenix (partial examples)
+            3192: 'Fenix 6', 3195: 'Fenix 6 Pro', 3358: 'Fenix 7', 3891: 'Fenix 7 Pro',
+            // Edge (partial examples)
+            1030: 'Edge 1030', 2962: 'Edge 530', 3003: 'Edge 830',
+            // Venu/Vivoactive (partial examples)
+            3785: 'Venu 2', 3812: 'Venu 2S', 3482: 'Vivoactive 4',
+          };
+          prodStr = garminMap[product] || String(product);
+        } else {
+          prodStr = (product!=null ? String(product) : 'Unknown');
+        }
+      }
+      prodStr = normalizeProductName(brandStr, prodStr);
+
+      // Build optional details only if present
+      const details = [];
+      if (sw!=null) {
+        let swStr = String(sw);
+        if (typeof sw === 'number' && sw % 1 !== 0) swStr = (Math.round(sw*100)/100).toFixed(2);
+        details.push(`sw version = ${swStr}`);
+      }
+      if (serial!=null) {
+        details.push(`serial = ${String(serial)}`);
+      }
+      const detailsStr = details.length ? ` (${details.join(', ')})` : '';
+      return `${brandStr} ${prodStr}${detailsStr}`;
     }
 
     setSmoothingUI(sliderToTau(smoothSlider.value));
