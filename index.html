@@ -149,8 +149,9 @@
   <header>
     <div class="title">FIT Viewer -- Heart Rate, Core Temp, Skin Temp</div>
 
-    <div class="section-heading" aria-hidden="true">Device Metadata</div>
+    <div class="section-heading" aria-hidden="true">Metadata</div>
     <div id="deviceName" class="device-line" aria-label="Device metadata line"></div>
+    <div id="activityTime" class="device-line" aria-label="Activity date and time range"></div>
 
     <div class="row">
       <input id="file" type="file" accept=".fit" />
@@ -180,6 +181,7 @@
     </div>
     <div class="row" style="margin-top:6px">
       <label class="chip"><input type="checkbox" id="toggle-trim" checked><span class="swatch" style="background:#4b5563"></span><span class="label">Trim Early Noise</span><span class="state" id="state-trim">On</span></label>
+      <label class="chip"><input type="checkbox" id="toggle-xaxis"><span class="swatch" style="background:#4b5563"></span><span class="label">X-Axis: Time of Day</span><span class="state" id="state-xaxis">Off</span></label>
     </div>
     <div class="stats" id="stats"></div>
   </div>
@@ -237,6 +239,7 @@
 
   <script>
     const textDecoder = new TextDecoder('utf-8');
+    const FIT_EPOCH_OFFSET = 631065600; // Seconds from 1970-01-01 to 1989-12-31
 
     function clamp(v,min,max){return Math.max(min, Math.min(max, v));}
     function pad2(n){return n<10?'0'+n:''+n;}
@@ -246,6 +249,14 @@
       const m = Math.floor((sec%3600)/60);
       const s = sec % 60;
       return (h>0? (h+':') : '') + pad2(m) + ':' + pad2(s);
+    }
+    function fmtTOD(date) {
+      if (!(date instanceof Date) || !isFinite(date)) return '--:--:--';
+      return pad2(date.getHours()) + ':' + pad2(date.getMinutes()) + ':' + pad2(date.getSeconds());
+    }
+    function fmtDate(date) {
+      if (!(date instanceof Date) || !isFinite(date)) return 'N/A';
+      return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
     }
     function fmtS(sec){
       if (sec >= 10) return Math.round(sec) + ' s';
@@ -560,6 +571,9 @@
 
         this.elevSeries = [];
         this.hsiBgSeries = [];
+
+        this.baseTime = 0;
+        this.xAxisMode = 'delta'; // 'delta' or 'timeOfDay'
 
         this._bind();
         this.resize();
@@ -967,7 +981,14 @@
         ctx.textBaseline = 'top';
         for (const tv of xTicks) {
           const x = this._sx(tv);
-          ctx.fillText(fmtHMS(tv), x, H - this.margins.bottom + 6);
+          let labelText;
+          if (this.xAxisMode === 'timeOfDay' && this.baseTime > 0) {
+            const d = new Date((this.baseTime + tv + FIT_EPOCH_OFFSET) * 1000);
+            labelText = fmtTOD(d);
+          } else {
+            labelText = fmtHMS(tv);
+          }
+          ctx.fillText(labelText, x, H - this.margins.bottom + 6);
         }
 
         ctx.textAlign = 'right';
@@ -990,9 +1011,17 @@
         const plotW = this._plotWidth();
         const x = xMin + ( (this.tooltip.x - this.margins.left) / plotW ) * (xMax - xMin);
         const nearest = [];
-        nearest.push({id:'time', text:'t = ' + fmtHMS(clamp(x, xMin, xMax))});
+        let timeText;
+        if (this.xAxisMode === 'timeOfDay' && this.baseTime > 0) {
+          const d = new Date((this.baseTime + x + FIT_EPOCH_OFFSET) * 1000);
+          timeText = 't = ' + fmtTOD(d);
+        } else {
+          timeText = 't = ' + fmtHMS(clamp(x, xMin, xMax));
+        }
+        nearest.push({id:'time', text: timeText});
+
         for (const s of this.series) {
-          if (!s || !s.visible || !s.points || s.points.length===0) continue;
+          if (!s || !s.visible || !s.points || !s.points.length===0) continue;
           const idx = this._bisectX(s.points, x);
           let best = null;
           for (const j of [idx-1, idx, idx+1]) {
@@ -1031,6 +1060,7 @@
     const smoothSlider = document.getElementById('smoothSlider');
     const smoothText = document.getElementById('smoothText');
     const deviceNameEl = document.getElementById('deviceName');
+    const activityTimeEl = document.getElementById('activityTime');
 
     const canvas = document.getElementById('chart');
     const chart = new LineChart(canvas);
@@ -1044,6 +1074,7 @@
       pace: document.getElementById('toggle-pace'),
       cad:  document.getElementById('toggle-cad'),
       trim: document.getElementById('toggle-trim'),
+      xaxis: document.getElementById('toggle-xaxis'),
     };
 
     const toggleStates = {
@@ -1055,6 +1086,7 @@
       pace: document.getElementById('state-pace'),
       cad:  document.getElementById('state-cad'),
       trim: document.getElementById('state-trim'),
+      xaxis: document.getElementById('state-xaxis'),
     };
 
     function refreshToggleStates(){
@@ -1065,8 +1097,15 @@
     }
 
     for (const el of Object.values(toggles)) {
-      el.addEventListener('change', ()=>{ refreshToggleStates(); renderChart(); updateStatsUI(); });
+      if (el.id !== 'toggle-xaxis') {
+        el.addEventListener('change', ()=>{ refreshToggleStates(); renderChart(); updateStatsUI(); });
+      }
     }
+    toggles.xaxis.addEventListener('change', () => {
+      current.xAxisMode = toggles.xaxis.checked ? 'timeOfDay' : 'delta';
+      refreshToggleStates();
+      renderChart();
+    });
     refreshToggleStates();
 
     let current = {
@@ -1108,7 +1147,8 @@
       cutoffX: 0,
       selection: null,
 
-      zoomMode: false
+      zoomMode: false,
+      xAxisMode: 'delta',
     };
 
     function setSmoothingUI(tau){
@@ -1148,6 +1188,8 @@
       messageEl.textContent = 'Load a .FIT file. Zoom mode is OFF by default so you can slide across the graph to see values. Turn Zoom mode ON to drag-select a time range. All parsing and rendering happen locally.';
       statsEl.textContent = '';
       deviceNameEl.textContent = '';
+      activityTimeEl.textContent = '';
+      activityTimeEl.style.display = 'none';
       mapBtn.disabled = true;
       zoomClearBtn.disabled = true;
       zoomModeBtn.disabled = true;
@@ -1158,9 +1200,13 @@
         hrRaw: [], coreRaw: [], skinRaw: [], hsiRaw: [], distRaw: [], paceRaw: [], cadRaw: [], elevRaw: [],
         hrSeries: [], coreSeries: [], skinSeries: [], hsiSeries: [], distSeries: [], paceSeries: [], cadSeries: [], elevSeries: [],
         coreKey: null, skinKey: null, coreScale: 1, skinScale: 1, coreOffset: 0, skinOffset: 0,
-        tauSec: 0, cutoffX: 0, selection: null, zoomMode: false
+        tauSec: 0, cutoffX: 0, selection: null, zoomMode: false, xAxisMode: 'delta'
       };
+      toggles.xaxis.checked = false;
+      refreshToggleStates();
       chart.setZoomMode(false);
+      chart.xAxisMode = 'delta';
+      chart.baseTime = 0;
       smoothSlider.value = "75";
       setSmoothingUI(sliderToTau(75));
       chart.setSeries([], []);
@@ -1183,6 +1229,8 @@
       zoomModeBtn.disabled = false;
       messageEl.textContent = 'Parsing...';
       statsEl.textContent = '';
+      activityTimeEl.textContent = '';
+      activityTimeEl.style.display = 'none';
       mapBtn.disabled = true;
       zoomClearBtn.disabled = true;
 
@@ -1219,6 +1267,17 @@
           messageEl.textContent = 'Parsed. Zoom OFF: slide to inspect; Zoom ON: drag-select.';
         }
         current.baseTime = firstTs || 0;
+
+        if (current.baseTime > 0) {
+          const lastElapsed = records.length ? records[records.length - 1]._elapsed : 0;
+          const startTime = new Date((current.baseTime + FIT_EPOCH_OFFSET) * 1000);
+          const endTime = new Date((current.baseTime + lastElapsed + FIT_EPOCH_OFFSET) * 1000);
+          activityTimeEl.textContent = `Activity Date: ${fmtDate(startTime)} | Time: ${fmtTOD(startTime)} - ${fmtTOD(endTime)}`;
+          activityTimeEl.style.display = 'block';
+        } else {
+          activityTimeEl.textContent = '';
+          activityTimeEl.style.display = 'none';
+        }
 
         // Extract base fields
         const hrRaw = [];
@@ -1559,6 +1618,9 @@
     function filterPoints(arr){ return (arr||[]).filter(p => inView(p.x)); }
 
     function renderChart(){
+      chart.xAxisMode = current.xAxisMode;
+      chart.baseTime = current.baseTime;
+
       const series = [
         { id:'core', name:'Core Temp',  color:getVar('--core','#1e88e5'), axis:'left',  visible: toggles.core.checked, points: filterPoints(current.coreSeries), fmt:(v)=> `${(Math.round(v*100)/100).toFixed(2)} °C` },
         { id:'skin', name:'Skin Temp',  color:getVar('--skin','#fb8c00'), axis:'left',  visible: toggles.skin.checked, points: filterPoints(current.skinSeries), fmt:(v)=> `${(Math.round(v*100)/100).toFixed(2)} °C` },
