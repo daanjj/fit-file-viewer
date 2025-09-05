@@ -11,8 +11,8 @@ Mobile-first, client-side FIT file viewer for heart rate, core/skin temperature,
 - Dual-axis chart with zero-phase smoothing (0–30 s)
 - HSI background bands:
 - <1 green, 1–<2 orange, ≥2 red
-- Elevation backdrop behind the series (auto-scaled)
-- Route canvas (offline), tightly fit to track; start/end markers
+- Elevation backdrop behind the series (auto-scaled) NOT WORKING YET
+- Route canvas (offline), tightly fit to track; start/end markers NOT WORKING YET
 - Touch-friendly:
 - Zoom OFF: finger slide to inspect with crosshair
 - Zoom ON: drag-select time window; Clear Zoom to reset
@@ -29,7 +29,7 @@ Mobile-first, client-side FIT file viewer for heart rate, core/skin temperature,
 - Pace from enhanced speed (m/s) → min/km; fallback to speed or distance deltas
 - Distance shown in km; default assumption distance is in centimeters (cm→km)
 - Mapping modal for developer fields (core/skin), with scale factors
-- Device line: “<brand> <product> (sw version = X, serial= Y)”
+- Device line: “<brand> <product> (sw version = X, serial = Y)”
 
 ## Quick Start (Developers)
 1. Clone repo and open index.html in a modern browser, or:
