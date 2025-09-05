@@ -1,1038 +1,1852 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>FIT Viewer v1.1.0</title>
-<style>
-  :root{
-    --bg:#0f1115;
-    --card:#171a21;
-    --muted:#8a94a7;
-    --text:#e7ecf3;
-    --accent:#1976d2;
-    --accent-2:#2e7d32;
-    --danger:#d32f2f;
-    --grid:#233047;
-    --chip:#222734;
-    --chip-active:#2a3142;
+  <meta charset="utf-8" />
+  <title>FIT Viewer: HR, Core Temp, Skin Temp</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <style>
+    :root{
+      --bg:#0f1216;
+      --panel:#171b21;
+      --text:#e5e9f0;
+      --muted:#9aa4b2;
+      --accent:#4fc3f7;
+      --hr:#e53935;
+      --core:#1e88e5;
+      --skin:#fb8c00;
+      --grid:#232a32;
+      --ok:#2e7d32;
+      --warn:#ef6c00;
+      --err:#e53935;
 
-    --hsi-green:#e6f5ea;
-    --hsi-orange:#fff1e0;
-    --hsi-red:#ffe7e7;
+      --hsi:#ab47bc;
+      --dist:#66bb6a;
+      --pace:#26c6da;
+      --cad:#ffd54f;
+      --select:#4fc3f733;
+      --select-border:#4fc3f7aa;
 
-    --elev-stroke: rgba(60,60,60,0.28);
-    --elev-fill: rgba(60,60,60,0.09);
-  }
-  * { box-sizing: border-box; }
-  html, body { margin:0; padding:0; background:var(--bg); color:var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
-  a { color: var(--accent); text-decoration: none; }
-  header { position: sticky; top: 0; z-index: 50; background: var(--bg); border-bottom: 1px solid #1b2333; }
-  .wrap { max-width: 980px; margin: 0 auto; padding: 12px; }
-  .title { font-weight: 700; font-size: 18px; margin: 0 0 8px; }
-  .device-line { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .controls { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 8px; }
-  .row { display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
-  .file { background: var(--card); padding: 8px; border-radius: 8px; display:flex; align-items:center; gap:8px; }
-  .btn { background: var(--chip); color: var(--text); border: 1px solid #2b3245; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 14px; }
-  .btn.primary { background: var(--accent); border-color: transparent; color: white; }
-  .btn.ghost { background: transparent; }
-  .btn.danger { background: var(--danger); color: white; border-color: transparent; }
-  .btn:disabled { opacity: 0.5; cursor: default; }
-  .chip { background: var(--chip); color: var(--text); border: 1px solid #2b3245; padding: 4px 8px; border-radius: 999px; cursor: pointer; font-size: 12px; }
-  .chip.active { background: var(--chip-active); }
-  .sticky-bar { position: sticky; top: 52px; z-index: 40; background: var(--bg); padding: 8px 0; border-bottom: 1px solid #1b2333; }
-  .slider { display:flex; align-items:center; gap:8px; }
-  input[type="range"] { width: 160px; }
-  .maxima { display:flex; gap:8px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
-  .card { background: var(--card); border: 1px solid #253046; border-radius: 12px; padding: 8px; margin: 12px; }
-  .card h3 { margin: 6px 4px 8px; font-size: 14px; color:#c9d4e5; }
-  .chart-wrap { position: relative; width: 100%; overflow: hidden; border-radius: 8px; background: #0c0f14; }
-  canvas { display:block; width: 100%; height: 260px; }
-  .msg { margin: 6px 4px 0; font-size: 12px; color: var(--muted); max-height: 48px; overflow: auto; }
-  .legend { display:flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
-  .legend .swatch { width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; display:inline-block; vertical-align: -1px; }
-  .row.wrap { flex-wrap: wrap; }
-  .map-wrap { position: relative; width: 100%; overflow: hidden; border-radius: 8px; background: #0c0f14; }
-  .map-wrap canvas { height: 300px; }
-  .hidden { display:none !important; }
+      /* HSI zones on white canvas */
+      --hsi-bg-green:#2e7d321a;
+      --hsi-bg-orange:#ef6c001a;
+      --hsi-bg-red:#e539351a;
 
-  .modal-backdrop { position: fixed; inset:0; background: rgba(0,0,0,0.5); display:none; align-items: center; justify-content: center; z-index: 100; }
-  .modal { background: var(--card); border: 1px solid #2b3245; border-radius: 12px; width: min(640px, 92vw); padding: 12px; }
-  .modal h4 { margin: 0 0 8px; }
-  .modal .grid { display:grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .field { display:flex; flex-direction: column; gap: 4px; font-size: 13px; }
-  .field select, .field input { background:#0e1320; color: var(--text); border:1px solid #2b3245; border-radius: 6px; padding: 6px; }
-  .modal .actions { display:flex; gap:8px; justify-content:flex-end; margin-top: 10px; }
-  @media (min-width: 700px){
-    canvas { height: 360px; }
-    .map-wrap canvas { height: 420px; }
-  }
-</style>
+      /* Elevation background */
+      --elev-stroke:#6b728066;
+      --elev-fill:#6b728029;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+      font:400 16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,Apple Color Emoji,Segoe UI Emoji}
+    a{color:var(--accent);text-decoration:none}
+
+    header{
+      padding:12px 14px;
+      background:var(--panel);
+      border-bottom:1px solid #20262e;
+    }
+    header .title{font-weight:700;font-size:16px;margin-bottom:6px}
+    .section-heading{
+      font-weight:700;font-size:12px;letter-spacing:.04em;color:var(--muted);
+      text-transform:uppercase;margin:6px 0 2px 0;
+    }
+    .device-line{
+      color:var(--text);
+      font-size:13px;
+      margin:2px 0 8px 0;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    input[type="file"]{
+      color:var(--text);
+      background:#10141a;
+      border:1px solid #2a313b;
+      padding:8px 10px;border-radius:10px;
+      width:100%;
+      max-width:420px;
+    }
+    .btn{
+      background:#243041;border:1px solid #334255;color:var(--text);
+      padding:8px 12px;border-radius:10px;cursor:pointer;
+    }
+    .btn:disabled{opacity:0.6;cursor:not-allowed}
+
+    .legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+    .chip{
+      display:flex;align-items:center;gap:8px;
+      background:#11161d;border:1px solid #2a313b;border-radius:999px;padding:6px 10px;cursor:pointer;
+      user-select:none;
+    }
+    .swatch{width:14px;height:14px;border-radius:50%}
+    .chip input{display:none}
+    .chip input:checked + .label{opacity:1}
+    .chip .label{opacity:0.95}
+    .chip .unit{color:var(--muted);margin-left:4px}
+    .chip .state{color:var(--muted);margin-left:8px;font-weight:600}
+
+    .sticky-bar{
+      position:sticky;top:0;z-index:50;
+      padding:8px 14px;
+      background:var(--panel);
+      border-bottom:1px solid #20262e;
+      padding-top:calc(8px + env(safe-area-inset-top, 0px));
+    }
+    .slider-wrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .range{
+      -webkit-appearance:none;width:min(420px, 100%);height:28px;background:transparent;padding:0;margin:0
+    }
+    .range:focus{outline:none}
+    .range::-webkit-slider-runnable-track{height:6px;background:#2a313b;border-radius:999px;border:0}
+    .range::-webkit-slider-thumb{
+      -webkit-appearance:none;margin-top:-6px;
+      width:18px;height:18px;border-radius:50%;background:#4fc3f7;border:2px solid #1a222b
+    }
+    .range::-moz-range-track{height:6px;background:#2a313b;border:0;border-radius:999px}
+    .range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#4fc3f7;border:2px solid #1a222b}
+
+    .stats{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:14px;margin-top:6px}
+    .kbd{
+      font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+      background:#0f141a;border:1px solid #2a313b;padding:2px 6px;border-radius:6px;color:var(--muted)
+    }
+
+    .wrap{padding:10px;display:flex;flex-direction:column;gap:10px}
+    .card{background:var(--panel);border:1px solid #20262e;border-radius:12px;padding:10px}
+    canvas{
+      display:block;width:100%;height:58vh;background:#ffffff;border-radius:10px;
+      touch-action:none;
+    }
+    .msg{font-size:14px;color:var(--muted);margin-top:6px}
+    .error{color:var(--err)}
+    .ok{color:var(--ok)}
+    .warn{color:var(--warn)}
+    .footer{color:var(--muted);font-size:12px;text-align:center;padding:16px}
+
+    .modal-backdrop{
+      position:fixed;inset:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;padding:16px;z-index:100;
+    }
+    .modal{
+      width:100%;max-width:520px;background:var(--panel);border:1px solid #2a313b;border-radius:12px;padding:14px;
+      outline:none;
+    }
+    .modal h3{margin:0 0 8px 0}
+    .modal p{color:var(--muted);margin:0 0 12px 0}
+    .col{display:flex;flex-direction:column;gap:6px}
+    label{font-size:14px;color:var(--muted)}
+    select, input[type="number"]{
+      background:#0f141a;color:var(--text);border:1px solid #2a313b;border-radius:8px;padding:8px;min-width:140px
+    }
+
+    .sel-rect{
+      background:var(--select);
+      border:1px solid var(--select-border);
+    }
+  </style>
 </head>
 <body>
-<header>
+  <header>
+    <div class="title">FIT Viewer -- Heart Rate, Core Temp, Skin Temp</div>
+
+    <div class="section-heading" aria-hidden="true">Device Metadata</div>
+    <div id="deviceName" class="device-line" aria-label="Device metadata line"></div>
+
+    <div class="row">
+      <input id="file" type="file" accept=".fit" />
+      <button id="resetBtn" class="btn" disabled>Reset</button>
+      <button id="zoomModeBtn" class="btn" disabled>Zoom: Off</button>
+      <button id="zoomClearBtn" class="btn" disabled>Clear Zoom</button>
+      <button id="mapBtn" class="btn" disabled>Map Fields</button>
+    </div>
+
+    <div class="legend" id="legend">
+      <label class="chip"><input type="checkbox" id="toggle-hr" checked><span class="swatch" style="background:var(--hr)"></span><span class="label">Heart Rate <span class="unit">(bpm)</span></span><span class="state" id="state-hr">On</span></label>
+      <label class="chip"><input type="checkbox" id="toggle-core" checked><span class="swatch" style="background:var(--core)"></span><span class="label">Core Temp <span class="unit">(°C)</span></span><span class="state" id="state-core">On</span></label>
+      <label class="chip"><input type="checkbox" id="toggle-skin" checked><span class="swatch" style="background:var(--skin)"></span><span class="label">Skin Temp <span class="unit">(°C)</span></span><span class="state" id="state-skin">On</span></label>
+    </div>
+    <div class="legend">
+      <label class="chip"><input type="checkbox" id="toggle-hsi"><span class="swatch" style="background:var(--hsi)"></span><span class="label">Heat Strain Index</span><span class="state" id="state-hsi">Off</span></label>
+      <label class="chip"><input type="checkbox" id="toggle-dist"><span class="swatch" style="background:var(--dist)"></span><span class="label">Distance <span class="unit">(km)</span></span><span class="state" id="state-dist">Off</span></label>
+      <label class="chip"><input type="checkbox" id="toggle-pace"><span class="swatch" style="background:var(--pace)"></span><span class="label">Pace <span class="unit">(min/km)</span></span><span class="state" id="state-pace">Off</span></label>
+      <label class="chip"><input type="checkbox" id="toggle-cad"><span class="swatch" style="background:var(--cad)"></span><span class="label">Cadence <span class="unit">(spm)</span></span><span class="state" id="state-cad">Off</span></label>
+    </div>
+  </header>
+
+  <div class="sticky-bar" aria-label="Controls that stay visible">
+    <div class="row slider-wrap">
+      <span id="smoothText" class="kbd">Smoothing: 0 s</span>
+      <input id="smoothSlider" class="range" type="range" min="0" max="100" step="1" value="75" />
+    </div>
+    <div class="row" style="margin-top:6px">
+      <label class="chip"><input type="checkbox" id="toggle-trim" checked><span class="swatch" style="background:#4b5563"></span><span class="label">Trim Early Noise</span><span class="state" id="state-trim">On</span></label>
+    </div>
+    <div class="stats" id="stats"></div>
+  </div>
+
   <div class="wrap">
-    <div class="title">FIT Viewer v1.1.0</div>
-    <div id="deviceLine" class="device-line">No file loaded</div>
-    <div class="controls">
+    <div class="card">
+      <canvas id="chart" aria-label="Graph; slide to inspect, enable Zoom to select a range"></canvas>
+      <div id="message" class="msg">Load a .FIT file. Zoom mode is OFF by default so you can slide across the graph to see values. Turn Zoom mode ON to drag-select a time range. All parsing and rendering happen locally.</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Privacy: Your file never leaves your device. If temperatures don’t appear automatically, use “Map Fields” to assign developer data fields to Core/Skin and optionally apply a scale (e.g., 0.01).
+  </div>
+
+  <div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="mapTitle">
+    <div class="modal" tabindex="-1">
+      <h3 id="mapTitle">Map Developer Fields</h3>
+      <p>Select which developer fields represent Core and Skin temperatures. Optionally set a scale (e.g., 0.01 if values are in centi-degrees).</p>
       <div class="row">
-        <label class="file">
-          <input id="fileInput" type="file" accept=".fit" style="display:none">
-          <span class="btn">Choose .FIT</span>
-        </label>
-        <button id="resetBtn" class="btn ghost">Reset</button>
-        <button id="mapFieldsBtn" class="btn ghost" disabled>Map Fields</button>
-        <button id="zoomToggle" class="btn">Zoom: OFF</button>
-        <button id="clearZoom" class="btn" disabled>Clear Zoom</button>
-      </div>
-      <div class="row legend" id="legend"></div>
-    </div>
-  </div>
-  <div class="sticky-bar">
-    <div class="wrap">
-      <div class="row">
-        <div class="slider">
-          <span>Smoothing</span>
-          <input id="smoothRange" type="range" min="0" max="30" step="1" value="0">
-          <span id="smoothVal">0 s</span>
+        <div class="col" style="flex:1 1 220px">
+          <label for="coreSelect">Core Temp Field</label>
+          <select id="coreSelect"></select>
         </div>
-        <div class="row">
-          <button id="toggleHSIbg" class="chip hidden">HSI Background</button>
-          <button id="toggleElevBG" class="chip hidden">Elevation Backdrop</button>
+        <div class="col" style="width:120px">
+          <label for="coreScale">Core Scale</label>
+          <input id="coreScale" type="number" step="0.0001" value="1" />
+        </div>
+        <div class="col" style="width:120px">
+          <label for="coreOffset">Core Offset</label>
+          <input id="coreOffset" type="number" step="0.1" value="0" />
         </div>
       </div>
-      <div id="maxima" class="maxima"></div>
+      <div class="row" style="margin-top:8px">
+        <div class="col" style="flex:1 1 220px">
+          <label for="skinSelect">Skin Temp Field</label>
+          <select id="skinSelect"></select>
+        </div>
+        <div class="col" style="width:120px">
+          <label for="skinScale">Skin Scale</label>
+          <input id="skinScale" type="number" step="0.0001" value="1" />
+        </div>
+        <div class="col" style="width:120px">
+          <label for="skinOffset">Skin Offset</label>
+          <input id="skinOffset" type="number" step="0.1" value="0" />
+        </div>
+      </div>
+      <div class="msg" id="mapHint"></div>
+      <div class="row" style="justify-content:flex-end;margin-top:12px">
+        <button id="cancelMap" class="btn">Cancel</button>
+        <button id="applyMap" class="btn">Apply</button>
+      </div>
     </div>
   </div>
-</header>
 
-<main>
-  <section class="card">
-    <h3>Chart</h3>
-    <div class="chart-wrap">
-      <canvas id="chart"></canvas>
-    </div>
-    <div class="msg" id="message">Load a .fit file to view data. Slide finger to inspect values. Toggle Zoom to select a time range and tap Clear Zoom to reset.</div>
-  </section>
+  <script>
+    const textDecoder = new TextDecoder('utf-8');
 
-  <section id="routeSection" class="card hidden">
-    <h3>Route</h3>
-    <div class="map-wrap">
-      <canvas id="routeCanvas"></canvas>
-    </div>
-    <div class="msg">Offline route view: tight fit to your track; no external tiles.</div>
-  </section>
-</main>
-
-<div id="modalBackdrop" class="modal-backdrop">
-  <div class="modal">
-    <h4>Developer Field Mapping</h4>
-    <p style="color:var(--muted)">Select developer fields for Core and Skin temperatures. Apply scale factors if needed (e.g., 0.01 for centi-degrees).</p>
-    <div class="grid">
-      <div class="field">
-        <label for="coreField">Core Temp Field</label>
-        <select id="coreField"></select>
-      </div>
-      <div class="field">
-        <label for="coreScale">Core Scale</label>
-        <input id="coreScale" type="number" step="0.0001" value="1">
-      </div>
-      <div class="field">
-        <label for="skinField">Skin Temp Field</label>
-        <select id="skinField"></select>
-      </div>
-      <div class="field">
-        <label for="skinScale">Skin Scale</label>
-        <input id="skinScale" type="number" step="0.0001" value="1">
-      </div>
-    </div>
-    <div class="actions">
-      <button id="cancelMap" class="btn">Cancel</button>
-      <button id="applyMap" class="btn primary">Apply</button>
-    </div>
-  </div>
-</div>
-
-<script>
-const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const dpr = () => (window.devicePixelRatio || 1);
-const COLORS = {
-  core: '#ff6e40', skin: '#f9a825', hr: '#ec407a',
-  pace: '#42a5f5', distance: '#26a69a', cadence: '#ab47bc', hsi: '#ef5350'
-};
-
-const state = {
-  fileName: null, deviceLine: 'No file loaded',
-  records: [], t0: null, viewStart: 0, viewEnd: 0,
-  zoomActive: false, selecting: null, smoothingSec: 0,
-  show: { core:true, skin:true, hr:true, hsi:false, distance:false, pace:false, cadence:false },
-  showHSIbg:false, showElevBG:false,
-  devFields: [], map: { coreKey:null, coreScale:1, skinKey:null, skinScale:1 },
-  hasRoute: false
-};
-
-function semicirclesToDeg(v){ return v * (180 / Math.pow(2,31)); }
-
-class Bin {
-  constructor(buf){ this.dv=new DataView(buf); this.o=0; this.le=true; }
-  u8(){ const v=this.dv.getUint8(this.o); this.o+=1; return v; }
-  i8(){ const v=this.dv.getInt8(this.o); this.o+=1; return v; }
-  u16(){ const v=this.dv.getUint16(this.o,this.le); this.o+=2; return v; }
-  u32(){ const v=this.dv.getUint32(this.o,this.le); this.o+=4; return v; }
-  i16(){ const v=this.dv.getInt16(this.o,this.le); this.o+=2; return v; }
-  i32(){ const v=this.dv.getInt32(this.o,this.le); this.o+=4; return v; }
-  f32(){ const v=this.dv.getFloat32(this.o,this.le); this.o+=4; return v; }
-  f64(){ const v=this.dv.getFloat64(this.o,this.le); this.o+=8; return v; }
-  skip(n){ this.o+=n; } pos(){ return this.o; } seek(n){ this.o=n; } left(){ return this.dv.byteLength - this.o; }
-}
-
-async function parseFIT(arrayBuffer){
-  const b = new Bin(arrayBuffer);
-  if(b.left() < 12) throw new Error('Invalid FIT file');
-  const headerSize = b.u8();
-  b.u8(); b.u16(); // proto/prof ver
-  const dataSize = b.u32();
-  const fileType = String.fromCharCode(b.u8(), b.u8(), b.u8(), b.u8());
-  if(fileType !== '.FIT') throw new Error('Not a FIT file');
-  if(headerSize >= 14) b.u16();
-  b.seek(headerSize);
-
-  const baseTypes = {
-    0x00:{n:'enum',s:1,r:(dv,o)=>dv.getUint8(o)},
-    0x01:{n:'sint8',s:1,r:(dv,o)=>dv.getInt8(o)},
-    0x02:{n:'uint8',s:1,r:(dv,o)=>dv.getUint8(o)},
-    0x83:{n:'sint16',s:2,r:(dv,o)=>dv.getInt16(o,true)},
-    0x84:{n:'uint16',s:2,r:(dv,o)=>dv.getUint16(o,true)},
-    0x85:{n:'sint32',s:4,r:(dv,o)=>dv.getInt32(o,true)},
-    0x86:{n:'uint32',s:4,r:(dv,o)=>dv.getUint32(o,true)},
-    0x07:{n:'string',s:1,r:(dv,o)=>null},
-    0x88:{n:'float32',s:4,r:(dv,o)=>dv.getFloat32(o,true)},
-    0x89:{n:'float64',s:8,r:(dv,o)=>dv.getFloat64(o,true)},
-    0x0A:{n:'uint8z',s:1,r:(dv,o)=>dv.getUint8(o)},
-    0x8B:{n:'uint16z',s:2,r:(dv,o)=>dv.getUint16(o,true)},
-    0x8C:{n:'uint32z',s:4,r:(dv,o)=>dv.getUint32(o,true)},
-    0x0D:{n:'byte',s:1,r:(dv,o)=>dv.getUint8(o)},
-    0x8E:{n:'sint64',s:8,r:(dv,o)=>{const lo=dv.getUint32(o,true),hi=dv.getInt32(o+4,true);return hi*2**32+lo}},
-    0x8F:{n:'uint64',s:8,r:(dv,o)=>{const lo=dv.getUint32(o,true),hi=dv.getUint32(o+4,true);return hi*2**32+lo}},
-    0x90:{n:'uint64z',s:8,r:(dv,o)=>{const lo=dv.getUint32(o,true),hi=dv.getUint32(o+4,true);return hi*2**32+lo}},
-  };
-
-  const localDefs = {};
-  const devFieldDescs = {};
-  const messages = [];
-  const deviceInfo = [];
-  let fileId=null, fileCreator=null;
-
-  function readString(dv,o,len){
-    const bytes = new Uint8Array(dv.buffer, dv.byteOffset + o, len);
-    let out=''; for(let i=0;i<len;i++){ const c=bytes[i]; if(c===0) break; out+=String.fromCharCode(c); }
-    return out;
-  }
-
-  while(b.left() > 2){
-    const recHeader = b.u8();
-    const isDef = (recHeader & 0x40) !== 0;
-    const localNum = recHeader & 0x0F;
-    const isDevData = (recHeader & 0x20) !== 0;
-
-    if(isDef){
-      b.u8(); // arch
-      const globalMsgNum = b.u16();
-      const numFields = b.u8();
-      const fields=[];
-      for(let i=0;i<numFields;i++){
-        const fieldNum=b.u8(); const size=b.u8(); const base=b.u8();
-        fields.push({fieldNum,size,base});
-      }
-      const devFields=[];
-      if(isDevData){
-        const devNum = b.u8();
-        for(let i=0;i<devNum;i++){
-          const fieldNum=b.u8(); const devDataIndex=b.u8(); const size=b.u8();
-          devFields.push({fieldNum,devDataIndex,size});
-        }
-      }
-      localDefs[localNum] = {globalMsgNum, fields, devFields};
-    } else {
-      const def = localDefs[localNum];
-      if(!def){ break; }
-      const dv = b.dv; let o = b.pos();
-      function readField(fd){
-        const bt = baseTypes[fd.base]; const size = fd.size;
-        let val = null;
-        if(!bt){ /* skip */ }
-        else if(bt.n === 'string'){ val = readString(dv, o, size); }
-        else { try{ val = bt.r(dv, o); } catch(e){ val=null; } }
-        o += size; return val;
-      }
-      const msg = { global: def.globalMsgNum, fields:{}, dev:{} };
-      for(const f of def.fields){ msg.fields[f.fieldNum] = readField(f); }
-      for(const f of def.devFields){
-        const size = f.size;
-        const end = o + size;
-        if(end > dv.byteLength){ o = dv.byteLength; break; }
-        const arr = new Uint8Array(dv.buffer, dv.byteOffset + o, size);
-        let val = 0; const m = Math.min(4, size);
-        for(let i=0;i<m;i++){ val |= (arr[i] << (8*i)); }
-        o += size;
-        msg.dev[`${f.devDataIndex}:${f.fieldNum}`] = val;
-      }
-      b.seek(o);
-
-      if(msg.global === 206){
-        const fnum = msg.fields[3];
-        const devIdx = msg.fields[2];
-        const name = (typeof msg.fields[0] === 'string') ? msg.fields[0] : '';
-        const units = (typeof msg.fields[1] === 'string') ? msg.fields[1] : '';
-        const scale = (msg.fields[5] != null && msg.fields[5] !== 0) ? msg.fields[5] : 1;
-        const offset = (msg.fields[6] != null) ? msg.fields[6] : 0;
-        if(devIdx != null && fnum != null){
-          devFieldDescs[`${devIdx}:${fnum}`] = { name, units, scale, offset };
-        }
-      }
-      if(msg.global === 0){ fileId = msg; }
-      if(msg.global === 49){ fileCreator = msg; }
-      if(msg.global === 23){ deviceInfo.push(msg); }
-
-      messages.push(msg);
+    function clamp(v,min,max){return Math.max(min, Math.min(max, v));}
+    function pad2(n){return n<10?'0'+n:''+n;}
+    function fmtHMS(sec){
+      sec = Math.max(0, Math.floor(sec));
+      const h = Math.floor(sec/3600);
+      const m = Math.floor((sec%3600)/60);
+      const s = sec % 60;
+      return (h>0? (h+':') : '') + pad2(m) + ':' + pad2(s);
     }
-  }
-
-  const records = [];
-  for(const msg of messages){
-    if(msg.global !== 20) continue;
-    const f = msg.fields;
-    const timestamp = f[253] != null ? (f[253] + 631065600) : null;
-    const hr = f[3] ?? null;
-    const cadence = f[4] ?? null;
-    const distance = f[5] ?? null;
-    const speed = f[6] ?? null;
-    const enhanced_speed = f[13] ?? null;
-    const altitude = f[2] ?? null;
-    const enhanced_altitude = f[78] ?? null;
-    const position_lat = f[0] ?? null;
-    const position_long = f[1] ?? null;
-    const dev = {};
-    for(const k of Object.keys(msg.dev)){
-      const desc = devFieldDescs[k];
-      const raw = msg.dev[k];
-      if(desc){
-        const scaled = (raw - (desc.offset||0)) / (desc.scale || 1);
-        dev[k] = { value: scaled, name: desc.name || k, units: desc.units || '' };
-      } else {
-        dev[k] = { value: raw, name: k, units: '' };
-      }
+    function fmtS(sec){
+      if (sec >= 10) return Math.round(sec) + ' s';
+      if (sec >= 1) return (Math.round(sec*10)/10).toFixed(1) + ' s';
+      return (Math.round(sec*100)/100).toFixed(2) + ' s';
     }
-    records.push({ t: timestamp, hr, cadence, distance, speed, enhanced_speed, altitude, enhanced_altitude, position_lat, position_long, dev });
-  }
-
-  const devFieldsList = [];
-  const seen = new Set();
-  for(const msg of messages){
-    if(msg.global !== 20) continue;
-    for(const k of Object.keys(msg.dev)){
-      if(seen.has(k)) continue; seen.add(k);
-      const desc = devFieldDescs[k] || {};
-      devFieldsList.push({ key:k, name: desc.name || k, units: desc.units || '', example: msg.dev[k] });
+    function fmtPace(minPerKm){
+      if (!isFinite(minPerKm) || minPerKm<=0) return '--';
+      const totalSec = minPerKm*60;
+      const m = Math.floor(totalSec/60);
+      const s = Math.round(totalSec % 60);
+      return `${m}:${pad2(s)} /km`;
     }
-  }
-
-  const deviceLine = inferDeviceLine(deviceInfo, fileId, fileCreator);
-  return { records, devFieldsList, deviceLine };
-}
-
-function inferDeviceLine(deviceInfo, fileId, fileCreator){
-  let chosen = null;
-  for(const d of deviceInfo){
-    const idx = d.fields[2];
-    if(idx === 0){ chosen = d; break; }
-  }
-  let brand=null, product=null, sw=null, serial=null;
-  if(chosen){ brand = chosen.fields[1]; product = chosen.fields[3]; sw = chosen.fields[5]; serial = chosen.fields[4]; }
-  const brandName = manufacturerName(brand);
-  return `${brandName} ${product ?? '?'} (sw version = ${sw ?? '?'}, serial= ${serial ?? '?'})`;
-}
-function manufacturerName(id){
-  const map = { 1:'Garmin',13:'Wahoo',32:'Suunto',37:'Tacx',38:'SRAM',42:'Specialized',47:'Hammerhead',54:'Stages',76:'Polar' };
-  if(id == null) return 'Unknown';
-  return map[id] || `Manufacturer ${id}`;
-}
-
-function prepareData(){
-  const recs = state.records;
-  const xs = [];
-  const series = { core:[], skin:[], hr:[], pace:[], distance:[], cadence:[], hsi:[], elev:[], lat:[], lon:[] };
-
-  let coreKey = state.map.coreKey, skinKey = state.map.skinKey;
-  if(!coreKey || !skinKey){
-    const candidates = collectDevCandidates();
-    if(!coreKey && candidates.core){ coreKey = candidates.core.key; state.map.coreKey = coreKey; state.map.coreScale = candidates.core.scale || 1; }
-    if(!skinKey && candidates.skin){ skinKey = candidates.skin.key; state.map.skinKey = skinKey; state.map.skinScale = candidates.skin.scale || 1; }
-  }
-  let hsiKey = null;
-  for(const k of listAllDevKeys()){
-    const name = (devName(k)||'').toLowerCase();
-    if(name.includes('heat strain') || name === 'hsi' || name.includes('hsi')){ hsiKey = k; break; }
-  }
-
-  let hasLatLon = false;
-  state.t0 = null;
-  for(let i=0;i<recs.length;i++){
-    const r = recs[i];
-    const t = r.t != null ? r.t : (state.t0 != null ? state.t0 + i : null);
-    if(state.t0 == null && t != null) state.t0 = t;
-    const elapsed = (state.t0 != null && t != null) ? (t - state.t0) : (i===0 ? 0 : xs[i-1] + 1);
-
-    xs.push(elapsed);
-
-    const core = (coreKey && r.dev[coreKey]) ? r.dev[coreKey].value * (state.map.coreScale||1) : NaN;
-    const skin = (skinKey && r.dev[skinKey]) ? r.dev[skinKey].value * (state.map.skinScale||1) : NaN;
-    const hr = (r.hr != null && r.hr !== 0) ? r.hr : NaN;
-
-    let dist_km = NaN;
-    if(r.distance != null) dist_km = r.distance / 100000;
-
-    let spd = (r.enhanced_speed != null && r.enhanced_speed > 0) ? r.enhanced_speed :
-              (r.speed != null && r.speed > 0 ? r.speed : NaN);
-    if(!isFinite(spd) && i>0 && isFinite(elapsed - xs[i-1]) && isFinite(dist_km) && isFinite(series.distance[i-1])){
-      const dd = dist_km - series.distance[i-1];
-      const dt = elapsed - xs[i-1];
-      const v = (dd>0 && dt>0) ? (dd*1000)/dt : NaN;
-      spd = v;
+    function niceTicks(min, max, count=5){
+      if (!isFinite(min) || !isFinite(max)) return [];
+      if (min===max) return [min];
+      const span = Math.max(1e-12, max - min);
+      const step0 = Math.pow(10, Math.floor(Math.log10(span / count)));
+      const err = (span / count) / step0;
+      let step;
+      if (err >= 7.5) step = 10*step0;
+      else if (err >= 3.5) step = 5*step0;
+      else if (err >= 1.5) step = 2*step0;
+      else step = step0;
+      const start = Math.ceil(min/step)*step;
+      const ticks = [];
+      for (let v=start; v<=max+1e-9; v+=step) ticks.push(v);
+      if (ticks.length===0) ticks.push(min);
+      return ticks;
     }
-    const pace_min_per_km = (spd && spd>0) ? (1000/spd)/60 : NaN;
-    const cadence_spm = (r.cadence != null) ? r.cadence * 2 : NaN;
-    const hsi = (hsiKey && r.dev[hsiKey]) ? r.dev[hsiKey].value : NaN;
-    const elev = (r.enhanced_altitude != null) ? r.enhanced_altitude :
-                 (r.altitude != null ? r.altitude : NaN);
-
-    let lat=NaN, lon=NaN;
-    if(r.position_lat != null && r.position_long != null){
-      lat = semicirclesToDeg(r.position_lat);
-      lon = semicirclesToDeg(r.position_long);
-      hasLatLon = true;
+    function getVar(name, fallback){
+      const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      return v || fallback;
     }
 
-    series.core.push(core); series.skin.push(skin); series.hr.push(hr);
-    series.pace.push(pace_min_per_km); series.distance.push(dist_km);
-    series.cadence.push(cadence_spm); series.hsi.push(hsi);
-    series.elev.push(elev); series.lat.push(lat); series.lon.push(lon);
-  }
-
-  state.viewStart = 0;
-  state.viewEnd = xs.length ? xs[xs.length-1] : 0;
-  state.hasRoute = hasLatLon;
-  return { xs, series };
-}
-
-function collectDevCandidates(){
-  const keys = listAllDevKeys();
-  const pick = (cond) => {
-    for(const k of keys){
-      const n = (devName(k)||'').toLowerCase();
-      const u = (devUnits(k)||'').toLowerCase();
-      const v = firstDevValue(k);
-      if(cond(n,u,v)) return { key:k, scale: guessScale(v) };
-    }
-    return null;
-  };
-  const isTemp = (n,u,v)=> (n.includes('core')||n.includes('skin')||u.includes('c')||n.includes('temp')) && isFinite(v);
-  const core = pick((n,u,v)=> isTemp(n,u,v) && (n.includes('core') || n.includes('esophageal') || n.includes('rectal')));
-  const skin = pick((n,u,v)=> isTemp(n,u,v) && (n.includes('skin') || n.includes('surface') || (!core && n.includes('temp'))));
-  return { core, skin };
-}
-function guessScale(v){
-  if(!isFinite(v) || v===0) return 1;
-  if(v > 200 && v < 10000) return 0.01;
-  if(v > 10000 && v < 1000000) return 0.001;
-  return 1;
-}
-function listAllDevKeys(){
-  const set = new Set();
-  for(const r of state.records){ for(const k of Object.keys(r.dev)) set.add(k); }
-  return Array.from(set);
-}
-function devName(k){ for(const r of state.records){ if(r.dev[k]) return r.dev[k].name || k; } return k; }
-function devUnits(k){ for(const r of state.records){ if(r.dev[k]) return r.dev[k].units || ''; } return ''; }
-function firstDevValue(k){ for(const r of state.records){ if(r.dev[k]) return r.dev[k].value; } return NaN; }
-
-function smoothZeroPhase(xs, ys, tauSec){
-  if(!ys || ys.length===0) return [];
-  if(tauSec <= 0) return ys.slice();
-  const n = ys.length;
-  const out = new Array(n).fill(NaN);
-  const fwd = new Array(n).fill(NaN);
-  const bwd = new Array(n).fill(NaN);
-  let prev = null, prevX = null;
-  for(let i=0;i<n;i++){
-    const y = ys[i], x = xs[i];
-    if(!isFinite(y)) { fwd[i] = prev; prevX = x; continue; }
-    if(prev == null){ prev = y; prevX = x; fwd[i] = y; continue; }
-    const dt = Math.max(1e-9, x - prevX);
-    const alpha = 1 - Math.exp(-dt / tauSec);
-    prev = prev + alpha*(y - prev);
-    prevX = x; fwd[i] = prev;
-  }
-  prev = null; prevX = null;
-  for(let i=n-1;i>=0;i--){
-    const y = ys[i], x = xs[i];
-    if(!isFinite(y)) { bwd[i] = prev; prevX = x; continue; }
-    if(prev == null){ prev = y; prevX = x; bwd[i] = y; continue; }
-    const dt = Math.max(1e-9, (prevX - x));
-    const alpha = 1 - Math.exp(-dt / tauSec);
-    prev = prev + alpha*(y - prev);
-    prevX = x; bwd[i] = prev;
-  }
-  for(let i=0;i<n;i++){
-    const a=fwd[i], c=bwd[i];
-    out[i] = (isFinite(a) && isFinite(c)) ? 0.5*(a+c) : (isFinite(a)?a : (isFinite(c)?c : NaN));
-  }
-  return out;
-}
-function downsample(xs, ys, maxPoints){
-  const n = xs.length;
-  if(n === 0) return { xs:[], ys:[] };
-  if(n <= maxPoints) return { xs: xs.slice(), ys: ys.slice() };
-  const stride = Math.max(1, Math.ceil(n / maxPoints));
-  const xs2 = [], ys2 = [];
-  for(let i=0;i<n;i+=stride){ xs2.push(xs[i]); ys2.push(ys[i]); }
-  return { xs: xs2, ys: ys2 };
-}
-function fmtPace(minPerKm){
-  if(!isFinite(minPerKm) || minPerKm <= 0 || minPerKm > 30) return '—';
-  const m = Math.floor(minPerKm);
-  const s = Math.round((minPerKm - m) * 60);
-  const s2 = s === 60 ? 0 : s;
-  const m2 = s === 60 ? m+1 : m;
-  return `${m2}:${String(s2).padStart(2,'0')} /km`;
-}
-function fmtNum(v, digits=1){ return isFinite(v) ? v.toFixed(digits) : '—'; }
-function fmtTime(sec){
-  if(!isFinite(sec) || sec<0) return '—';
-  const h = Math.floor(sec/3600); const m = Math.floor((sec%3600)/60); const s = Math.floor(sec%60);
-  return h>0 ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` : `${m}:${String(s).padStart(2,'0')}`;
-}
-
-const chart = { el:null, ctx:null, width:0, height:0, plot:{x:0,y:0,w:0,h:0}, xs:[], series:null, smoothed:{}, yLeft:[0,1], yRight:[0,1], hover:null };
-
-function initCanvas(canvas){
-  const rect = canvas.getBoundingClientRect();
-  const ratio = dpr();
-  canvas.width = Math.max(10, Math.floor(rect.width * ratio));
-  canvas.height = Math.max(10, Math.floor(rect.height * ratio));
-  const ctx = canvas.getContext('2d');
-  ctx.setTransform(ratio,0,0,ratio,0,0);
-  return ctx;
-}
-function resizeAll(){
-  if(chart.el){ chart.ctx = initCanvas(chart.el); }
-  routeCanvasResize();
-  draw();
-  drawRoute();
-}
-function setMessage(text){ const m = document.getElementById('message'); if(m) m.textContent = text || ''; }
-
-function updateMaxima(){
-  const el = document.getElementById('maxima');
-  if(!chart.xs.length || !chart.smoothed.core){ el.textContent = ''; return; }
-  const [x0,x1] = visibleRange();
-  const idx0 = findIndexAtTime(x0);
-  const idx1 = Math.min(findIndexAtTime(x1), chart.xs.length-1);
-  function maxIn(arr){ if(!arr || !arr.length) return NaN; let m=-Infinity; for(let i=idx0;i<=idx1;i++){ const v=arr[i]; if(isFinite(v) && v>m) m=v; } return m===-Infinity?NaN:m; }
-  const rows=[];
-  if(state.show.core) rows.push(`Max Core: ${fmtNum(maxIn(chart.smoothed.core),1)} °C`);
-  if(state.show.skin) rows.push(`Max Skin: ${fmtNum(maxIn(chart.smoothed.skin),1)} °C`);
-  if(state.show.hr) rows.push(`Max HR: ${fmtNum(maxIn(chart.smoothed.hr),0)} bpm`);
-  rows.push(`Window: ${fmtTime(x1-x0)}`);
-  if(state.show.hsi) rows.push(`Max HSI: ${fmtNum(maxIn(chart.smoothed.hsi),2)}`);
-  if(state.show.distance) rows.push(`Max Dist: ${fmtNum(maxIn(chart.smoothed.distance),2)} km`);
-  if(state.show.pace) rows.push(`Max Pace: ${fmtPace(maxIn(chart.smoothed.pace))}`);
-  if(state.show.cadence) rows.push(`Max Cadence: ${fmtNum(maxIn(chart.smoothed.cadence),0)} spm`);
-  el.textContent = rows.join('   •   ');
-}
-function layoutPlot(){
-  const padL = 48, padR = 48, padT = 8, padB = 22;
-  const rect = chart.el.getBoundingClientRect();
-  chart.width = rect.width; chart.height = rect.height;
-  chart.plot = { x: padL, y: padT, w: Math.max(10, chart.width - padL - padR), h: Math.max(10, chart.height - padT - padB) };
-}
-function visibleRange(){ return [state.viewStart, state.viewEnd]; }
-function findIndexAtTime(t){
-  const xs = chart.xs; if(!xs.length) return 0;
-  let lo=0, hi=xs.length-1;
-  while(lo<hi){ const mid=(lo+hi)>>>1; if(xs[mid] < t) lo=mid+1; else hi=mid; }
-  return lo;
-}
-function calcYAxisDomains(){
-  if(!chart.xs.length){ chart.yLeft=[0,1]; chart.yRight=[0,1]; return; }
-  const [x0,x1]=visibleRange(); const i0=findIndexAtTime(x0); const i1=Math.min(findIndexAtTime(x1), chart.xs.length-1);
-  let minL=+Infinity, maxL=-Infinity;
-  const add=(arr)=>{ if(!arr) return; for(let i=i0;i<=i1;i++){ const v=arr[i]; if(!isFinite(v)) continue; if(v<minL) minL=v; if(v>maxL) maxL=v; } };
-  if(state.show.core) add(chart.smoothed.core);
-  if(state.show.skin) add(chart.smoothed.skin);
-  if(!isFinite(minL) || !isFinite(maxL)){ minL=0; maxL=1; }
-  minL = Math.floor(minL); const maxLPadded = maxL + (maxL - minL) * 0.05;
-
-  let minR=+Infinity, maxR=-Infinity;
-  const addR=(arr)=>{ if(!arr) return; for(let i=i0;i<=i1;i++){ const v=arr[i]; if(!isFinite(v)) continue; if(v<minR) minR=v; if(v>maxR) maxR=v; } };
-  if(state.show.hr) addR(chart.smoothed.hr);
-  if(state.show.distance) addR(chart.smoothed.distance);
-  if(state.show.pace) addR(chart.smoothed.pace);
-  if(state.show.cadence) addR(chart.smoothed.cadence);
-  if(state.show.hsi) addR(chart.smoothed.hsi);
-  if(!isFinite(minR) || !isFinite(maxR)){ minR=0; maxR=1; }
-  const maxRPadded = maxR + (maxR - minR) * 0.05;
-
-  chart.yLeft=[minL, maxLPadded]; chart.yRight=[minR, maxRPadded];
-}
-function xToPx(x){ const [x0,x1]=visibleRange(); const {x:lx,w}=chart.plot; if(x1===x0) return lx; return lx + ((x-x0)/(x1-x0))*w; }
-function yToPxL(y){ const {y:ty,h}=chart.plot; const [y0,y1]=chart.yLeft; if(y1===y0) return ty+h/2; return ty + (1 - (y - y0)/(y1 - y0)) * h; }
-function yToPxR(y){ const {y:ty,h}=chart.plot; const [y0,y1]=chart.yRight; if(y1===y0) return ty+h/2; return ty + (1 - (y - y0)/(y1 - y0)) * h; }
-
-function drawAxes(){
-  const ctx = chart.ctx; const {x,y,w,h}=chart.plot;
-  ctx.save(); ctx.strokeStyle='rgba(255,255,255,0.06)'; ctx.lineWidth=1; ctx.strokeRect(x,y,w,h);
-  const ticks=5;
-  for(let i=0;i<=ticks;i++){
-    const yy=y+(i/ticks)*h; ctx.beginPath(); ctx.moveTo(x,yy); ctx.lineTo(x+w,yy);
-    ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.stroke();
-  }
-  ctx.fillStyle='#c9d4e5'; ctx.font='12px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
-  ctx.textAlign='right'; ctx.textBaseline='middle';
-  const [l0,l1]=chart.yLeft, [r0,r1]=chart.yRight;
-  for(let i=0;i<=ticks;i++){
-    const p=i/ticks; const yy=y+p*h; const ly=l1 - p*(l1-l0); const ry=r1 - p*(r1-r0);
-    if(state.show.core || state.show.skin){ ctx.fillStyle='#c9d4e5'; ctx.fillText(ly.toFixed(0), x-6, yy); }
-    ctx.fillStyle='#9fb0c9'; ctx.textAlign='left'; ctx.fillText(ry.toFixed(0), x+w+6, yy); ctx.textAlign='right';
-  }
-  ctx.textAlign='center'; ctx.textBaseline='top';
-  const [x0,x1]=visibleRange();
-  for(let i=0;i<=ticks;i++){
-    const xx=x+(i/ticks)*w; const tt=x0+(i/ticks)*(x1-x0); ctx.fillStyle='#b9c6db'; ctx.fillText(fmtTime(tt), xx, y+h+4);
-  }
-  ctx.restore();
-}
-
-function drawHSIBackground(){
-  if(!state.showHSIbg || !chart.xs.length) return;
-  const hsi = chart.smoothed.hsi || []; if(!hsi.length) return;
-  const ctx = chart.ctx; const {x,y,w,h}=chart.plot;
-  ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip();
-  const target = Math.max(50, Math.floor(w/2));
-  const { xs:dxs, ys:dys } = downsample(chart.xs, hsi, target);
-  const styles = getComputedStyle(document.documentElement);
-  const green = styles.getPropertyValue('--hsi-green').trim() || '#e6f5ea';
-  const orange = styles.getPropertyValue('--hsi-orange').trim() || '#fff1e0';
-  const red = styles.getPropertyValue('--hsi-red').trim() || '#ffe7e7';
-  const colorFor = (v)=> !isFinite(v) ? null : (v<1 ? green : (v<2 ? orange : red));
-  for(let i=0;i<dxs.length-1;i++){
-    const x0 = xToPx(dxs[i]); const x1 = xToPx(dxs[i+1]);
-    const c = colorFor(dys[i]); if(!c) continue;
-    ctx.fillStyle = c; ctx.fillRect(x0, y, Math.max(1, x1-x0+1), h);
-  }
-  ctx.restore();
-}
-
-function drawElevationBackdrop(){
-  if(!state.showElevBG || !chart.xs.length) return;
-  const elev = chart.smoothed.elev || []; if(!elev.length) return;
-  const [x0,x1] = visibleRange(); const i0=findIndexAtTime(x0); const i1=Math.min(findIndexAtTime(x1), chart.xs.length-1);
-  let min=+Infinity,max=-Infinity; for(let i=i0;i<=i1;i++){ const v=elev[i]; if(!isFinite(v)) continue; if(v<min) min=v; if(v>max) max=v; }
-  if(!isFinite(min) || !isFinite(max) || max-min < 1e-9) return;
-  const ctx = chart.ctx; const {x,y,w,h}=chart.plot; ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip();
-  const target = Math.max(100, Math.floor(w/1.5));
-  const { xs:dxs, ys:dys } = downsample(chart.xs, elev, target);
-  const yMap = (ev)=> y + (1 - (ev - min)/(max - min)) * h;
-  let started=false; ctx.beginPath();
-  for(let i=0;i<dxs.length;i++){
-    const xv = dxs[i]; const yv = dys[i]; if(!isFinite(yv)) continue;
-    const xx=xToPx(xv), yy=yMap(yv);
-    if(!started){ ctx.moveTo(xx,yy); started=true; } else { ctx.lineTo(xx,yy); }
-  }
-  if(started){
-    const styles = getComputedStyle(document.documentElement);
-    ctx.lineJoin='round'; ctx.lineCap='round';
-    // Fill to bottom
-    ctx.lineTo(xToPx(dxs[dxs.length-1]), y+h);
-    ctx.lineTo(xToPx(dxs[0]), y+h);
-    ctx.closePath();
-    ctx.fillStyle = styles.getPropertyValue('--elev-fill').trim() || 'rgba(60,60,60,0.08)';
-    ctx.fill();
-    // Stroke
-    ctx.beginPath(); started=false;
-    for(let i=0;i<dxs.length;i++){
-      const xv=dxs[i], yv=dys[i]; if(!isFinite(yv)) continue;
-      const xx=xToPx(xv), yy=yMap(yv);
-      if(!started){ ctx.moveTo(xx,yy); started=true; } else { ctx.lineTo(xx,yy); }
-    }
-    ctx.strokeStyle = styles.getPropertyValue('--elev-stroke').trim() || 'rgba(60,60,60,0.25)';
-    ctx.lineWidth = 1.25; ctx.stroke();
-  }
-  ctx.restore();
-}
-
-function drawSeries(){
-  if(!chart.xs.length) return;
-  const ctx = chart.ctx; const {x,y,w,h}=chart.plot;
-  ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip();
-  const drawLine=(xs,ys,color,yMap)=>{
-    if(!xs || !ys || xs.length===0 || ys.length===0) return;
-    ctx.beginPath(); let started=false;
-    for(let i=0;i<xs.length;i++){
-      const v = ys[i]; if(!isFinite(v)) { started=false; continue; }
-      const xx=xToPx(xs[i]); const yy=yMap(v);
-      if(!started){ ctx.moveTo(xx,yy); started=true; } else { ctx.lineTo(xx,yy); }
-    }
-    ctx.strokeStyle=color; ctx.lineWidth=1.5; ctx.lineJoin='round'; ctx.lineCap='round'; ctx.stroke();
-  };
-  if(state.show.core) drawLine(chart.xs, chart.smoothed.core, COLORS.core, yToPxL);
-  if(state.show.skin) drawLine(chart.xs, chart.smoothed.skin, COLORS.skin, yToPxL);
-  if(state.show.hr) drawLine(chart.xs, chart.smoothed.hr, COLORS.hr, yToPxR);
-  if(state.show.distance) drawLine(chart.xs, chart.smoothed.distance, COLORS.distance, yToPxR);
-  if(state.show.pace) drawLine(chart.xs, chart.smoothed.pace, COLORS.pace, yToPxR);
-  if(state.show.cadence) drawLine(chart.xs, chart.smoothed.cadence, COLORS.cadence, yToPxR);
-  if(state.show.hsi) drawLine(chart.xs, chart.smoothed.hsi, COLORS.hsi, yToPxR);
-  ctx.restore();
-}
-
-function drawCrosshair(){
-  if(!chart.hover || !chart.xs.length) return;
-  const {x,y,w,h}=chart.plot; const ctx=chart.ctx; const xPx=chart.hover.xPx;
-  ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip();
-  ctx.strokeStyle='rgba(255,255,255,0.35)'; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(xPx,y); ctx.lineTo(xPx,y+h); ctx.stroke(); ctx.restore();
-  drawTooltip(chart.hover.idx, xPx);
-}
-
-function drawTooltip(idx, xPx){
-  const xs = chart.xs; if(!xs || !xs.length) return;
-  idx = clamp(idx, 0, xs.length-1);
-  const ctx = chart.ctx; const pad=8;
-  const lines = [];
-  const t = xs[idx];
-  lines.push(`t = ${fmtTime(t)}`);
-
-  const add=(name, show, arr, fmt, color)=>{
-    if(!show || !arr || idx >= arr.length) return;
-    const v = arr[idx];
-    if(!isFinite(v)) return;
-    lines.push({ label:name, val: fmt(v), color });
-  };
-  add('Core', state.show.core, chart.smoothed.core, v=>`${v.toFixed(2)} °C`, COLORS.core);
-  add('Skin', state.show.skin, chart.smoothed.skin, v=>`${v.toFixed(2)} °C`, COLORS.skin);
-  add('HR', state.show.hr, chart.smoothed.hr, v=>`${v.toFixed(0)} bpm`, COLORS.hr);
-  add('HSI', state.show.hsi, chart.smoothed.hsi, v=>v.toFixed(2), COLORS.hsi);
-  add('Distance', state.show.distance, chart.smoothed.distance, v=>`${v.toFixed(2)} km`, COLORS.distance);
-  add('Pace', state.show.pace, chart.smoothed.pace, v=>fmtPace(v), COLORS.pace);
-  add('Cadence', state.show.cadence, chart.smoothed.cadence, v=>`${v.toFixed(0)} spm`, COLORS.cadence);
-
-  ctx.save(); ctx.font='12px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
-  let w=0,h=0;
-  const timeText = typeof lines[0] === 'string' ? lines[0] : '';
-  w = Math.max(w, ctx.measureText(timeText).width); h += 16;
-  const content=[];
-  for(let i=1;i<lines.length;i++){ const L=lines[i]; const str=`${L.label}: ${L.val}`; w=Math.max(w, ctx.measureText(str).width); h+=16; content.push(L); }
-  w += pad*2 + (content.length?12:0); h += pad*2;
-  const {x:lx,y:ty,w:pw} = chart.plot;
-  let left = xPx + 10; if(left + w > lx + pw) left = xPx - w - 10; let top = ty + 10;
-  ctx.fillStyle='rgba(5,8,14,0.9)'; ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.roundRect(left, top, w, h, 6); ctx.fill(); ctx.stroke();
-  ctx.fillStyle='#cfe1ff'; ctx.fillText(timeText, left+pad, top+pad+11);
-  let yy=top+pad+24;
-  for(const L of content){
-    ctx.fillStyle=L.color; ctx.fillRect(left+pad, yy-8, 10, 10);
-    ctx.fillStyle='#e7ecf3'; ctx.fillText(`${L.label}: ${L.val}`, left+pad+14, yy);
-    yy+=16;
-  }
-  ctx.restore();
-}
-
-function drawSelection(){
-  if(!state.selecting) return;
-  const ctx = chart.ctx; const {x,y,h}=chart.plot;
-  const x0=Math.min(state.selecting.x0, state.selecting.x1);
-  const x1=Math.max(state.selecting.x0, state.selecting.x1);
-  const xx0=clamp(x0, x, x+chart.plot.w), xx1=clamp(x1, x, x+chart.plot.w);
-  ctx.save(); ctx.fillStyle='rgba(25, 118, 210, 0.20)'; ctx.fillRect(xx0,y,Math.max(0,xx1-xx0),h);
-  ctx.strokeStyle='rgba(25,118,210,0.65)'; ctx.lineWidth=1; ctx.strokeRect(xx0,y,Math.max(0,xx1-xx0),h); ctx.restore();
-}
-
-function draw(){
-  if(!chart.ctx) return;
-  layoutPlot();
-  chart.ctx.clearRect(0,0,chart.width,chart.height);
-  drawHSIBackground();
-  drawElevationBackdrop();
-  drawAxes();
-  drawSeries();
-  drawCrosshair();
-  drawSelection();
-}
-
-/* Interactions */
-function canvasToTime(px){
-  const { x, w } = chart.plot; const [t0,t1] = visibleRange();
-  const u = clamp((px - x)/w, 0, 1); return t0 + u*(t1 - t0);
-}
-function timeToIndex(t){ return clamp(findIndexAtTime(t), 0, Math.max(0, chart.xs.length-1)); }
-function pointerDown(ev){
-  if(!chart.xs.length) return;
-  const rect = chart.el.getBoundingClientRect();
-  const cx = ('clientX' in ev ? ev.clientX : (ev.touches?.[0]?.clientX || 0)) - rect.left;
-  chart.el.setPointerCapture?.(ev.pointerId || 1);
-  if(state.zoomActive){ state.selecting = { x0: cx, x1: cx }; }
-  else { chart.hover = { xPx: cx, idx: timeToIndex(canvasToTime(cx)) }; }
-  ev.preventDefault(); draw();
-}
-function pointerMove(ev){
-  if(!chart.xs.length) return;
-  const rect = chart.el.getBoundingClientRect();
-  const cx = ('clientX' in ev ? ev.clientX : (ev.touches?.[0]?.clientX || 0)) - rect.left;
-  if(state.zoomActive && state.selecting){ state.selecting.x1 = cx; }
-  else { chart.hover = { xPx: cx, idx: timeToIndex(canvasToTime(cx)) }; }
-  ev.preventDefault(); draw();
-}
-function pointerUp(ev){
-  if(state.zoomActive && state.selecting && chart.xs.length){
-    const { x0, x1 } = state.selecting; state.selecting = null;
-    const a = canvasToTime(x0), b = canvasToTime(x1);
-    const t0 = Math.min(a,b), t1 = Math.max(a,b);
-    if(isFinite(t0) && isFinite(t1) && t1 - t0 > 1){
-      state.viewStart = t0; state.viewEnd = t1;
-      document.getElementById('clearZoom').disabled = false;
-      updateMaxima(); draw(); return;
-    }
-  }
-  ev.preventDefault(); draw();
-}
-
-/* Route canvas */
-const route = { el:null, ctx:null, width:0, height:0 };
-function routeCanvasResize(){
-  if(!route.el) return;
-  const rect = route.el.getBoundingClientRect(); const ratio = dpr();
-  route.el.width = Math.max(10, Math.floor(rect.width * ratio));
-  route.el.height = Math.max(10, Math.floor(rect.height * ratio));
-  route.ctx = route.el.getContext('2d'); route.ctx.setTransform(ratio,0,0,ratio,0,0);
-}
-function drawRoute(){
-  const section = document.getElementById('routeSection');
-  if(section.classList.contains('hidden')) return;
-  if(!route.el || !route.ctx) return;
-  const lat = (chart.series && chart.series.lat) ? chart.series.lat : [];
-  const lon = (chart.series && chart.series.lon) ? chart.series.lon : [];
-  const pts = [];
-  for(let i=0;i<lat.length;i++){ if(isFinite(lat[i]) && isFinite(lon[i])) pts.push([lat[i], lon[i]]); }
-  const ctx = route.ctx;
-  const w = route.el.getBoundingClientRect().width;
-  const h = route.el.getBoundingClientRect().height;
-  ctx.clearRect(0,0,w,h);
-  if(pts.length < 2) return;
-
-  let minLat=+Infinity, maxLat=-Infinity, minLon=+Infinity, maxLon=-Infinity;
-  for(const [la,lo] of pts){ if(la<minLat) minLat=la; if(la>maxLat) maxLat=la; if(lo<minLon) minLon=lo; if(lo>maxLon) maxLon=lo; }
-  const padLat = (maxLat - minLat) * 0.05 || 0.001;
-  const padLon = (maxLon - minLon) * 0.05 || 0.001;
-  minLat -= padLat; maxLat += padLat; minLon -= padLon; maxLon += padLon;
-
-  const denomLat = (maxLat - minLat) || 1e-9;
-  const denomLon = (maxLon - minLon) || 1e-9;
-
-  function project(lat, lon){
-    const x = (lon - minLon) / denomLon * (w - 20) + 10;
-    const y = (1 - (lat - minLat) / denomLat) * (h - 20) + 10;
-    return [x, y];
-  }
-
-  ctx.save();
-  ctx.fillStyle = '#0c0f14'; ctx.strokeStyle='rgba(255,255,255,0.08)'; ctx.lineWidth=1;
-  ctx.fillRect(0,0,w,h); ctx.strokeRect(0,0,w,h);
-
-  ctx.beginPath(); let started=false;
-  for(const [la,lo] of pts){
-    const [x,y] = project(la,lo);
-    if(!started){ ctx.moveTo(x,y); started=true; } else { ctx.lineTo(x,y); }
-  }
-  const styles = getComputedStyle(document.documentElement);
-  ctx.strokeStyle = styles.getPropertyValue('--accent').trim() || '#1976d2';
-  ctx.lineWidth = 3; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.stroke();
-
-  const [sx,sy] = project(pts[0][0], pts[0][1]);
-  const [ex,ey] = project(pts[pts.length-1][0], pts[pts.length-1][1]);
-  ctx.fillStyle = styles.getPropertyValue('--accent-2').trim() || '#2e7d32';
-  ctx.beginPath(); ctx.arc(sx, sy, 5, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = styles.getPropertyValue('--danger').trim() || '#d32f2f';
-  ctx.beginPath(); ctx.arc(ex, ey, 5, 0, Math.PI*2); ctx.fill();
-  ctx.restore();
-}
-
-/* UI */
-function populateLegend(){
-  const legend = document.getElementById('legend'); if(!legend) return;
-  legend.innerHTML = '';
-  const items = [
-    { key:'core', label:'Core', color:COLORS.core },
-    { key:'skin', label:'Skin', color:COLORS.skin },
-    { key:'hr', label:'HR', color:COLORS.hr },
-    { key:'hsi', label:'HSI', color:COLORS.hsi },
-    { key:'distance', label:'Distance', color:COLORS.distance },
-    { key:'pace', label:'Pace', color:COLORS.pace },
-    { key:'cadence', label:'Cadence', color:COLORS.cadence }
-  ];
-  for(const it of items){
-    const btn = document.createElement('button');
-    btn.className = 'chip' + (state.show[it.key] ? ' active' : '');
-    btn.innerHTML = `<span class="swatch" style="background:${it.color}"></span>${it.label}`;
-    btn.onclick = ()=>{
-      state.show[it.key] = !state.show[it.key];
-      btn.classList.toggle('active', state.show[it.key]);
-      recalcSmooth(); calcYAxisDomains(); updateMaxima(); draw();
+    const MANUFACTURERS = {
+      1:'Garmin', 13:'SRAM', 15:'Zwift', 23:'Tacx', 32:'Wahoo', 38:'Stages',
+      42:'Suunto', 70:'Hammerhead', 76:'Stages', 89:'Polar', 167:'COROS'
     };
-    legend.appendChild(btn);
-  }
-}
-function recalcSmooth(){
-  const xs = chart.xs || []; const s = chart.series || { core:[],skin:[],hr:[],distance:[],pace:[],cadence:[],hsi:[],elev:[] };
-  const T = Math.max(0, state.smoothingSec);
-  chart.smoothed.core = smoothZeroPhase(xs, s.core, T);
-  chart.smoothed.skin = smoothZeroPhase(xs, s.skin, T);
-  chart.smoothed.hr = smoothZeroPhase(xs, s.hr, T);
-  chart.smoothed.distance = smoothZeroPhase(xs, s.distance, T);
-  chart.smoothed.pace = smoothZeroPhase(xs, s.pace, T);
-  chart.smoothed.cadence = smoothZeroPhase(xs, s.cadence, T);
-  chart.smoothed.hsi = smoothZeroPhase(xs, s.hsi, T);
-  chart.smoothed.elev = smoothZeroPhase(xs, s.elev, T);
-}
-function openMapModal(devList){
-  const backdrop = document.getElementById('modalBackdrop');
-  const coreField = document.getElementById('coreField');
-  const skinField = document.getElementById('skinField');
-  const coreScale = document.getElementById('coreScale');
-  const skinScale = document.getElementById('skinScale');
-  function fill(select, selected){
-    select.innerHTML = '<option value="">—</option>';
-    for(const d of devList){
-      const opt = document.createElement('option');
-      const label = `${d.name || d.key}${d.units ? ' ('+d.units+')' : ''}`;
-      opt.value = d.key; opt.textContent = label; if(selected && selected === d.key) opt.selected = true;
-      select.appendChild(opt);
+
+    function normalizeProductName(brand, name){
+      if (!name) return name;
+      const s = String(name).trim();
+      const lc = s.toLowerCase();
+      const brandLc = (brand||'').toLowerCase();
+      if (brandLc === 'garmin') {
+        // Forerunner: 'frXX', 'fr XX', 'forerunnerXX', 'forerunner XX' (+ optional 'Music')
+        const music = /music/i.test(s);
+        const fr = lc.match(/(?:^|\b)(?:fr|forerunner)\s*(\d{2,3})\b/);
+        if (fr && fr[1]) return `Forerunner ${fr[1]}${music ? ' Music' : ''}`;
+        // Edge: 'edge 530/830/1030, etc'
+        const edge = lc.match(/edge\s*(\d{3,4})\b/);
+        if (edge && edge[1]) return `Edge ${edge[1]}`;
+        // Venu: 'venu', 'venu 2', 'venu sq'
+        const venu2 = lc.match(/venu\s*(sq|2|2s|3|3s)?\b/);
+        if (venu2) {
+          const tag = venu2[1];
+          return `Venu${tag ? ' ' + tag.toUpperCase() : ''}`;
+        }
+        // Vivoactive
+        const va = lc.match(/vivoactive\s*(\d+|hr)?\b/);
+        if (va) {
+          const tag = va[1];
+          return `Vivoactive${tag ? ' ' + String(tag).toUpperCase() : ''}`;
+        }
+        // Instinct: 'instinct', 'instinct 2/2s'
+        const inst = lc.match(/instinct\s*(2s|2)?\b/);
+        if (inst) return `Instinct${inst[1] ? ' ' + inst[1].toUpperCase() : ''}`;
+        // Fenix (normalize diacritics)
+        const fenix = lc.match(/f[eē]nix\s*([0-9xXsS+\spro]+)?/);
+        if (fenix) {
+          const tag = fenix[1] ? fenix[1].replace(/\s+/g,' ').trim() : '';
+          return `Fenix${tag ? ' ' + tag.toUpperCase() : ''}`;
+        }
+        // Epix
+        const epix = lc.match(/epix\s*(gen\s*2|pro)?/);
+        if (epix) return `Epix${epix[1] ? ' ' + epix[1].replace(/\s+/g,' ').toUpperCase() : ''}`;
+        // MARQ
+        if (/\bmarq\b/i.test(s)) return 'MARQ';
+        // Descent
+        const descent = lc.match(/descent\s*([a-z0-9]+)?/);
+        if (descent) return `Descent${descent[1] ? ' ' + descent[1].toUpperCase() : ''}`;
+        // D2 (Aviation)
+        const d2 = lc.match(/\bd2\s*([a-z0-9]+)?/);
+        if (d2) return `D2${d2[1] ? ' ' + d2[1].toUpperCase() : ''}`;
+      }
+      return s;
     }
-  }
-  fill(coreField, state.map.coreKey);
-  fill(skinField, state.map.skinKey);
-  coreScale.value = state.map.coreScale ?? 1;
-  skinScale.value = state.map.skinScale ?? 1;
-  backdrop.style.display = 'flex';
-  document.getElementById('cancelMap').onclick = ()=>{ backdrop.style.display = 'none'; };
-  document.getElementById('applyMap').onclick = ()=>{
-    state.map.coreKey = coreField.value || null;
-    state.map.skinKey = skinField.value || null;
-    state.map.coreScale = parseFloat(coreScale.value || '1') || 1;
-    state.map.skinScale = parseFloat(skinScale.value || '1') || 1;
-    backdrop.style.display = 'none';
-    const prepared = prepareData();
-    chart.xs = prepared.xs; chart.series = prepared.series;
-    recalcSmooth(); calcYAxisDomains(); updateMaxima(); draw();
-  };
-}
 
-async function handleFile(file){
-  try{
-    const buf = await file.arrayBuffer();
-    const { records, devFieldsList, deviceLine } = await parseFIT(buf);
-    if(!records || records.length === 0){ setMessage('No record messages found in this FIT file.'); return; }
-    state.records = records; state.fileName = file.name;
-    document.getElementById('deviceLine').textContent = deviceLine || 'Device unknown';
+    class FitParser {
+      constructor() {
+        this._devKeysUsed = new Set();
+        this.devFieldDescriptions = new Map();
+        this.fieldDescObjs = [];
+        this.fileIds = [];
+        this.deviceInfos = [];
+        this.fileCreators = [];
+      }
 
-    const prepared = prepareData();
-    chart.xs = prepared.xs || []; chart.series = prepared.series || {};
+      parse(arrayBuffer) {
+        const view = new DataView(arrayBuffer);
+        let pos = 0;
 
-    const hasHSI = (chart.series.hsi || []).some(v=>isFinite(v));
-    const hasElev = (chart.series.elev || []).some(v=>isFinite(v));
-    state.showHSIbg = hasHSI; state.showElevBG = hasElev;
-    const hsiBtn = document.getElementById('toggleHSIbg'); const elevBtn = document.getElementById('toggleElevBG');
-    hsiBtn.classList.toggle('hidden', !hasHSI); elevBtn.classList.toggle('hidden', !hasElev);
-    hsiBtn.classList.toggle('active', state.showHSIbg); elevBtn.classList.toggle('active', state.showElevBG);
+        const headerSize = view.getUint8(pos); pos+=1;
+        pos+=1; pos+=2;
+        const dataSize = view.getUint32(pos, true); pos+=4;
+        const sig = String.fromCharCode(view.getUint8(pos), view.getUint8(pos+1), view.getUint8(pos+2), view.getUint8(pos+3));
+        pos+=4;
+        if (headerSize === 14) pos += 2;
+        if (sig !== '.FIT') throw new Error('Invalid FIT signature');
 
-    const hasRoute = state.hasRoute && (chart.series.lat||[]).some(isFinite) && (chart.series.lon||[]).some(isFinite);
-    document.getElementById('routeSection').classList.toggle('hidden', !hasRoute);
+        const dataEnd = headerSize + dataSize;
+        pos = headerSize;
 
-    const mapBtn = document.getElementById('mapFieldsBtn');
-    mapBtn.disabled = !(devFieldsList && devFieldsList.length);
-    mapBtn.onclick = ()=> openMapModal(devFieldsList||[]);
+        const defMap = new Map();
+        let lastTimestamp;
+        const records = [];
 
-    recalcSmooth(); calcYAxisDomains(); populateLegend(); updateMaxima(); draw(); drawRoute();
-    setMessage('Slide finger to inspect values. Toggle Zoom to select a time range and tap Clear Zoom to reset.');
-  } catch(err){
-    console.error(err); setMessage('Failed to parse FIT file. See console for details.');
-  }
-}
+        while (pos < dataEnd) {
+          const header = view.getUint8(pos); pos += 1;
 
-/* Init */
-window.addEventListener('DOMContentLoaded', ()=>{
-  chart.el = document.getElementById('chart'); chart.ctx = initCanvas(chart.el);
-  route.el = document.getElementById('routeCanvas'); route.ctx = initCanvas(route.el);
+          if (header & 0x80) {
+            const localNum = (header >> 5) & 0x03;
+            const timeOffset = header & 0x1F;
+            const def = defMap.get(localNum);
+            if (!def) throw new Error('Compressed header refers to unknown local message: ' + localNum);
 
-  chart.el.addEventListener('pointerdown', pointerDown, {passive:false});
-  chart.el.addEventListener('pointermove', pointerMove, {passive:false});
-  chart.el.addEventListener('pointerup', pointerUp, {passive:false});
-  chart.el.addEventListener('pointercancel', pointerUp, {passive:false});
-  chart.el.addEventListener('pointerleave', pointerUp, {passive:false});
+            let ts;
+            if (lastTimestamp === undefined) ts = 0;
+            else {
+              ts = (lastTimestamp & ~31) + timeOffset;
+              if (ts <= lastTimestamp) ts += 32;
+            }
+            lastTimestamp = ts;
 
-  document.querySelector('.file .btn').onclick = ()=> document.getElementById('fileInput').click();
-  document.getElementById('fileInput').addEventListener('change', (e)=>{ const f = e.target.files?.[0]; if(f) handleFile(f); });
+            const {obj, bytesConsumed} = this._decodeData(view, pos, def, true, ts);
+            pos += bytesConsumed;
+            this._route(def.globalMsgNum, obj, records);
+          } else {
+            const isDefinition = (header & 0x40) !== 0;
+            const hasDeveloper = (header & 0x20) !== 0;
+            const localNum = header & 0x0F;
 
-  document.getElementById('resetBtn').onclick = ()=>{
-    state.fileName=null; state.records=[]; state.t0=null; state.viewStart=0; state.viewEnd=0; state.zoomActive=false; state.selecting=null;
-    chart.xs=[]; chart.series=null; chart.smoothed={}; chart.hover=null;
-    document.getElementById('zoomToggle').textContent='Zoom: OFF';
-    document.getElementById('clearZoom').disabled=true;
-    document.getElementById('deviceLine').textContent='No file loaded';
-    document.getElementById('routeSection').classList.add('hidden');
-    document.getElementById('mapFieldsBtn').disabled=true;
-    document.getElementById('toggleHSIbg').classList.add('hidden');
-    document.getElementById('toggleElevBG').classList.add('hidden');
-    populateLegend(); updateMaxima(); draw(); drawRoute();
-    setMessage('Load a .fit file to view data.');
-  };
+            if (isDefinition) {
+              const reserved = view.getUint8(pos); pos+=1;
+              const arch = view.getUint8(pos); pos+=1;
+              const little = arch === 0;
+              const globalMsgNum = view.getUint16(pos, little); pos+=2;
 
-  document.getElementById('zoomToggle').onclick = ()=>{
-    state.zoomActive = !state.zoomActive;
-    document.getElementById('zoomToggle').textContent = `Zoom: ${state.zoomActive ? 'ON' : 'OFF'}`;
-  };
-  document.getElementById('clearZoom').onclick = ()=>{
-    state.viewStart = 0; state.viewEnd = chart.xs.length ? chart.xs[chart.xs.length-1] : 0;
-    document.getElementById('clearZoom').disabled = true; updateMaxima(); draw();
-  };
+              const numFields = view.getUint8(pos); pos+=1;
+              const fields = [];
+              for (let i=0;i<numFields;i++) {
+                const fieldNum = view.getUint8(pos); pos+=1;
+                const size = view.getUint8(pos); pos+=1;
+                const baseType = view.getUint8(pos); pos+=1;
+                fields.push({num: fieldNum, size, baseTypeId: (baseType & 0x1F)});
+              }
 
-  const sr = document.getElementById('smoothRange'); const sv = document.getElementById('smoothVal');
-  sr.addEventListener('input', ()=>{
-    state.smoothingSec = parseInt(sr.value,10)||0; sv.textContent = `${state.smoothingSec} s`;
-    if(chart.series){ recalcSmooth(); calcYAxisDomains(); updateMaxima(); draw(); }
-  }); sv.textContent = `${state.smoothingSec} s`;
+              const devFields = [];
+              if (hasDeveloper) {
+                const numDevFields = view.getUint8(pos); pos+=1;
+                for (let i=0;i<numDevFields;i++) {
+                  const dfNum = view.getUint8(pos); pos+=1;
+                  const dfSize = view.getUint8(pos); pos+=1;
+                  const dfIndex = view.getUint8(pos); pos+=1;
+                  devFields.push({num: dfNum, size: dfSize, devIndex: dfIndex});
+                }
+              }
 
-  const hsiBtn = document.getElementById('toggleHSIbg');
-  const elevBtn = document.getElementById('toggleElevBG');
-  hsiBtn.onclick = ()=>{ state.showHSIbg = !state.showHSIbg; hsiBtn.classList.toggle('active', state.showHSIbg); draw(); };
-  elevBtn.onclick = ()=>{ state.showElevBG = !state.showElevBG; elevBtn.classList.toggle('active', state.showElevBG); draw(); };
+              defMap.set(localNum, {globalMsgNum, little, fields, devFields});
+            } else {
+              const def = defMap.get(localNum);
+              if (!def) throw new Error('Data message refers to unknown local message: ' + localNum);
 
-  window.addEventListener('resize', resizeAll);
+              const {obj, bytesConsumed} = this._decodeData(view, pos, def, false, undefined);
+              pos += bytesConsumed;
 
-  populateLegend(); draw(); drawRoute();
-});
+              if (def.globalMsgNum === 20) {
+                if (obj.timestamp !== undefined) lastTimestamp = obj.timestamp;
+                else if (lastTimestamp !== undefined) obj.timestamp = lastTimestamp;
+              }
+              this._route(def.globalMsgNum, obj, records);
+            }
+          }
+        }
 
-if(!CanvasRenderingContext2D.prototype.roundRect){
-  CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r){
-    r=Math.min(r, w/2, h/2);
-    this.beginPath(); this.moveTo(x+r, y);
-    this.arcTo(x+w, y, x+w, y+h, r);
-    this.arcTo(x+w, y+h, x, y+h, r);
-    this.arcTo(x, y+h, x, y, r);
-    this.arcTo(x, y, x+w, y, r);
-    this.closePath(); return this;
-  };
-}
-</script>
+        this._mapFieldDescriptions();
+
+        return {
+          records,
+          devFieldDescriptions: this.devFieldDescriptions,
+          fileIds: this.fileIds,
+          deviceInfos: this.deviceInfos,
+          fileCreators: this.fileCreators
+        };
+      }
+
+      _route(globalMsgNum, obj, records){
+        if (globalMsgNum === 20) records.push(obj);
+        else if (globalMsgNum === 206) this.fieldDescObjs.push(obj);
+        else if (globalMsgNum === 0) this.fileIds.push(obj);
+        else if (globalMsgNum === 23) this.deviceInfos.push(obj);
+        else if (globalMsgNum === 49) this.fileCreators.push(obj);
+      }
+
+      _decodeData(view, offset, def, isCompressed, compressedTs) {
+        let pos = offset;
+        const obj = { timestamp: undefined, fields: {}, dev: {}, _def: def };
+        for (const fld of def.fields) {
+          const baseId = fld.baseTypeId;
+          const size = fld.size;
+          if (isCompressed && fld.num === 253) { obj.timestamp = compressedTs; continue; }
+          const value = this._readValue(view, pos, baseId, size, def.little);
+          pos += size;
+          if (fld.num === 253) { if (typeof value === 'number') obj.timestamp = value; }
+          else obj.fields[fld.num] = value;
+        }
+        if (def.devFields && def.devFields.length) {
+          for (const df of def.devFields) {
+            const key = df.devIndex + ':' + df.num;
+            const value = this._readDevValue(view, pos, df.size, def.little);
+            pos += df.size;
+            obj.dev[key] = value;
+            this._devKeysUsed.add(key);
+          }
+        }
+        return { obj, bytesConsumed: pos - offset };
+      }
+
+      _readValue(view, pos, baseId, size, little) {
+        switch (baseId) {
+          case 7: { const bytes = new Uint8Array(view.buffer, view.byteOffset + pos, size); let zero = bytes.indexOf(0); if (zero < 0) zero = bytes.length; return textDecoder.decode(bytes.subarray(0, zero)); }
+          case 0: case 2: case 10: return view.getUint8(pos);
+          case 1: return view.getInt8(pos);
+          case 3: return view.getInt16(pos, little);
+          case 4: case 11: return view.getUint16(pos, little);
+          case 5: return view.getInt32(pos, little);
+          case 6: case 12: return view.getUint32(pos, little);
+          case 8: return view.getFloat32(pos, little);
+          case 9: return view.getFloat64(pos, little);
+          case 13: return view.getUint8(pos);
+          case 14: { if (view.getBigInt64) return Number(view.getBigInt64(pos, little)); const lo = view.getUint32(pos, little), hi = view.getInt32(pos+4, little); return hi * 4294967296 + lo; }
+          case 15: case 16: { if (view.getBigUint64) return Number(view.getBigUint64(pos, little)); const lo = view.getUint32(pos, little), hi = view.getUint32(pos+4, little); return hi * 4294967296 + lo; }
+          default: return view.getUint8(pos);
+        }
+      }
+
+      _readDevValue(view, pos, size, little) {
+        if (size === 4) { const f = view.getFloat32(pos, little); if (Number.isFinite(f) && Math.abs(f) < 1e12) return f; return view.getInt32(pos, little); }
+        else if (size === 2) return view.getInt16(pos, little);
+        else if (size === 1) return view.getUint8(pos);
+        else if (size === 8) { const d = view.getFloat64(pos, little); if (Number.isFinite(d)) return d; if (view.getBigInt64) return Number(view.getBigInt64(pos, little)); const lo = view.getUint32(pos, little), hi = view.getUint32(pos+4, little); return hi * 4294967296 + lo; }
+        else return view.getUint8(pos);
+      }
+
+      _mapFieldDescriptions() {
+        const candidates = Array.from(this._devKeysUsed);
+        if (candidates.length === 0) return;
+        const set = new Set(candidates);
+        for (const obj of this.fieldDescObjs) {
+          const nums1b=[], strings=[];
+          for (const v of Object.values(obj.fields)) {
+            if (typeof v === 'number' && Number.isInteger(v) && v>=0 && v<=255) nums1b.push(v);
+            else if (typeof v === 'string' && v.length) strings.push(v.trim());
+          }
+          let matchedKey=null;
+          for (let i=0;i<nums1b.length;i++){
+            for (let j=0;j<nums1b.length;j++){
+              if (i===j) continue;
+              const key = nums1b[i]+':'+nums1b[j];
+              if (set.has(key)){ matchedKey=key; break; }
+            }
+            if (matchedKey) break;
+          }
+          if (matchedKey){
+            let name='', units='';
+            if (strings.length===1){ const s=strings[0]; if (/^([cC]|degC|°C|Celsius|K|F|bpm|min\/km|km|m\/s|spm)$/i.test(s)) units=s; else name=s; }
+            else if (strings.length>=2){ strings.sort((a,b)=>a.length-b.length); units=strings[0]; name=strings[strings.length-1]; }
+            const ex=this.devFieldDescriptions.get(matchedKey)||{};
+            if (name) ex.name=name;
+            if (units) ex.units=units;
+            // Capture scale/offset when provided (per FIT field_description: scale=6, offset=7)
+            const sc = obj.fields && typeof obj.fields[6] === 'number' ? obj.fields[6] : undefined;
+            const off = obj.fields && typeof obj.fields[7] === 'number' ? obj.fields[7] : undefined;
+            if (Number.isFinite(sc) && sc !== 0) ex.scale = sc;
+            if (Number.isFinite(off)) ex.offset = off;
+            this.devFieldDescriptions.set(matchedKey, ex);
+          }
+        }
+      }
+    }
+
+    class LineChart {
+      constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.series = [];
+        this.dpr = Math.max(1, window.devicePixelRatio || 1);
+        this.margins = {top:10, right:60, bottom:26, left:50};
+        this.tooltip = {active:false, x:0, nearest:[]};
+
+        this.zoomMode = false;
+        this.dragging = false;
+        this.selStartPx = 0;
+        this.selEndPx = 0;
+        this.crosshairDragging = false;
+        this.onSelectRange = null;
+
+        this.xRange = [0, 1];
+        this.yLeft = [20, 40];
+        this.yRight = [50, 180];
+
+        this.elevSeries = [];
+        this.hsiBgSeries = [];
+
+        this._bind();
+        this.resize();
+      }
+      setZoomMode(on){ this.zoomMode = !!on; }
+      _ensureRanges(){
+        const ok = a => Array.isArray(a) && a.length===2 && isFinite(a[0]) && isFinite(a[1]) && a[1]>a[0];
+        if (!ok(this.xRange)) this.xRange=[0,1];
+        if (!ok(this.yLeft)) this.yLeft=[20,40];
+        if (!ok(this.yRight)) this.yRight=[50,180];
+      }
+      setSeries(series, elevSeries = null){
+        this.series = series || [];
+        if (Array.isArray(elevSeries)) this.elevSeries = elevSeries;
+        this._computeRanges();
+        this.draw();
+      }
+      resize(){
+        const rect = this.canvas.getBoundingClientRect();
+        const cssW = Math.max(1, rect.width);
+        const cssH = Math.max(1, rect.height);
+        this.canvas.width = Math.max(1, Math.floor(cssW * this.dpr));
+        this.canvas.height = Math.max(1, Math.floor(cssH * this.dpr));
+        this.ctx.setTransform(this.dpr,0,0,this.dpr,0,0);
+        this.draw();
+      }
+      _bind(){
+        window.addEventListener('resize', () => this.resize(), {passive:true});
+
+        this.canvas.addEventListener('pointerdown', (e)=>{
+          const x = this._clientToCanvasX(e.clientX);
+          if (this.zoomMode) {
+            e.preventDefault();
+            this.dragging = true;
+            this.selStartPx = x;
+            this.selEndPx = x;
+            this.tooltip.active = false;
+            this.canvas.setPointerCapture(e.pointerId);
+            this.draw();
+          } else {
+            e.preventDefault();
+            this.crosshairDragging = true;
+            this.tooltip.active = true;
+            this.tooltip.x = x;
+            this._updateTooltipNearest();
+            this.canvas.setPointerCapture(e.pointerId);
+            this.draw();
+          }
+        }, {passive:false});
+
+        this.canvas.addEventListener('pointermove', (e)=>{
+          const x = this._clientToCanvasX(e.clientX);
+          if (this.dragging) {
+            e.preventDefault();
+            this.selEndPx = x;
+            this.draw();
+          } else if (this.crosshairDragging || e.pointerType === 'mouse') {
+            e.preventDefault();
+            this.tooltip.active = true;
+            this.tooltip.x = x;
+            this._updateTooltipNearest();
+            this.draw();
+          }
+        }, {passive:false});
+
+        const endDrag = (e)=>{
+          if (this.dragging) {
+            e.preventDefault();
+            this.dragging = false;
+            const w = Math.abs(this.selEndPx - this.selStartPx);
+            if (w > 6) {
+              const x1 = this._pixToDataX(Math.min(this.selStartPx, this.selEndPx));
+              const x2 = this._pixToDataX(Math.max(this.selStartPx, this.selEndPx));
+              if (this.onSelectRange) this.onSelectRange([x1, x2]);
+            }
+          }
+          if (this.crosshairDragging) {
+            e.preventDefault();
+            this.crosshairDragging = false;
+          }
+          try { this.canvas.releasePointerCapture(e.pointerId); } catch {}
+        };
+        this.canvas.addEventListener('pointerup', endDrag, {passive:false});
+        this.canvas.addEventListener('pointercancel', endDrag, {passive:false});
+        this.canvas.addEventListener('pointerleave', (e)=>{
+          if (this.dragging || this.crosshairDragging) endDrag(e);
+          else { this.tooltip.active=false; this.draw(); }
+        }, {passive:false});
+      }
+      _clientToCanvasX(clientX){
+        const rect = this.canvas.getBoundingClientRect();
+        return (clientX - rect.left);
+      }
+      _plotWidth(){
+        const W = this.canvas.clientWidth || (this.canvas.width/this.dpr);
+        return Math.max(1, (W - this.margins.left - this.margins.right));
+      }
+      _pixToDataX(px){
+        const [xMin,xMax]=this.xRange;
+        const plotW = this._plotWidth();
+        const rel = clamp((px - this.margins.left)/plotW, 0, 1);
+        return xMin + rel * (xMax - xMin);
+      }
+      _computeRanges(){
+        let xMin=Infinity, xMax=-Infinity;
+        for (const s of this.series) if (s && s.visible && s.points && s.points.length) {
+          xMin = Math.min(xMin, s.points[0].x);
+          xMax = Math.max(xMax, s.points[s.points.length-1].x);
+        }
+        if (this.elevSeries && this.elevSeries.length){
+          xMin = Math.min(xMin, this.elevSeries[0].x);
+          xMax = Math.max(xMax, this.elevSeries[this.elevSeries.length-1].x);
+        }
+        if (!isFinite(xMin) || !isFinite(xMax) || xMin===xMax) { xMin=0; xMax=1; }
+        this.xRange = [xMin, xMax];
+
+        let lmin=Infinity, lmax=-Infinity;
+        for (const s of this.series) if (s && s.visible && s.axis==='left' && s.points && s.points.length){
+          for (const p of s.points){ if (Number.isFinite(p.y)) { lmin=Math.min(lmin,p.y); lmax=Math.max(lmax,p.y); } }
+        }
+        if (!isFinite(lmin) || !isFinite(lmax)) { lmin=20; lmax=40; }
+        const lstart = Math.floor(lmin);
+        let lend = lmax;
+        if (lend <= lstart) lend = lstart + 1;
+        const spanL = Math.max(1e-6, lend - lstart);
+        lend = lend + spanL*0.05;
+        this.yLeft = [lstart, lend];
+
+        let rmin=Infinity, rmax=-Infinity;
+        for (const s of this.series) if (s && s.visible && s.axis==='right' && s.points && s.points.length){
+          for (const p of s.points){ if (Number.isFinite(p.y)) { rmin=Math.min(rmin,p.y); rmax=Math.max(rmax,p.y); } }
+        }
+        if (!isFinite(rmin) || !isFinite(rmax) || rmin===rmax) { rmin=50; rmax=180; }
+        const spanR = Math.max(1e-6, rmax - rmin);
+        const padR = spanR*0.08;
+        this.yRight = [rmin - padR, rmax + padR];
+      }
+      _sx(x){
+        const [xMin,xMax]=this.xRange;
+        const W = this.canvas.clientWidth || (this.canvas.width/this.dpr);
+        return this.margins.left + ( (x - xMin) / Math.max(1e-9, (xMax-xMin)) ) * (W - this.margins.left - this.margins.right);
+      }
+      _syLeft(y){
+        const [min,max]=this.yLeft;
+        const H = this.canvas.clientHeight || (this.canvas.height/this.dpr);
+        return (H - this.margins.bottom) - ( (y - min) / Math.max(1e-9, (max-min)) ) * (H - this.margins.top - this.margins.bottom);
+      }
+      _syRight(y){
+        const [min,max]=this.yRight;
+        const H = this.canvas.clientHeight || (this.canvas.height/this.dpr);
+        return (H - this.margins.bottom) - ( (y - min) / Math.max(1e-9, (max-min)) ) * (H - this.margins.top - this.margins.bottom);
+      }
+
+      _drawElevationBackground(){
+        if (!this.elevSeries || this.elevSeries.length < 2) return;
+
+        const [xMin, xMax] = this.xRange;
+        let emin = Infinity, emax = -Infinity;
+        for (const p of this.elevSeries){
+          if (p.x < xMin || p.x > xMax) continue;
+          if (Number.isFinite(p.y)) { emin = Math.min(emin, p.y); emax = Math.max(emax, p.y); }
+        }
+        if (!isFinite(emin) || !isFinite(emax) || emax - emin <= 1e-9) return;
+
+        const ctx = this.ctx;
+        const H = this.canvas.clientHeight || (this.canvas.height/this.dpr);
+        const plotTop = this.margins.top;
+        const plotBottom = H - this.margins.bottom;
+
+        const elevToY = (val)=>{
+          const t = (val - emin) / (emax - emin);
+          return plotBottom - t * (plotBottom - plotTop);
+        };
+
+        ctx.save();
+        ctx.beginPath();
+        let started = false;
+        let firstX = null;
+        let lastX = null;
+        for (let i=0;i<this.elevSeries.length;i++){
+          const p = this.elevSeries[i];
+          if (p.x < xMin || p.x > xMax || !Number.isFinite(p.y)) continue;
+          const x = this._sx(p.x);
+          const y = elevToY(p.y);
+          if (!started){ ctx.moveTo(x, y); started = true; firstX = x; }
+          else ctx.lineTo(x, y);
+          lastX = x;
+        }
+        if (started){
+          ctx.lineTo(lastX, plotBottom);
+          ctx.lineTo(firstX, plotBottom);
+          ctx.closePath();
+          ctx.fillStyle = getVar('--elev-fill', '#6b728029');
+          ctx.fill();
+
+          ctx.beginPath();
+          started = false;
+          const step = Math.max(1, Math.floor(this.elevSeries.length / 3000));
+          for (let i=0;i<this.elevSeries.length;i+=step){
+            const p = this.elevSeries[i];
+            if (p.x < xMin || p.x > xMax || !Number.isFinite(p.y)) continue;
+            const x = this._sx(p.x);
+            const y = elevToY(p.y);
+            if (!started){ ctx.moveTo(x, y); started = true; }
+            else ctx.lineTo(x, y);
+          }
+          ctx.strokeStyle = getVar('--elev-stroke', '#6b728066');
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      _drawHSIBackground(){
+        const hsiSeries = (this.series.find(s => s.id==='hsi') || {}).points || [];
+        if (!hsiSeries.length) return;
+
+        const [xMin, xMax] = this.xRange;
+        const ctx = this.ctx;
+        const W = this.canvas.clientWidth || (this.canvas.width/this.dpr);
+        const H = this.canvas.clientHeight || (this.canvas.height/this.dpr);
+        const plotLeft = this.margins.left;
+        const plotRight = W - this.margins.right;
+        const plotTop = this.margins.top;
+        const plotBottom = H - this.margins.bottom;
+
+        const zoneOf = (v)=> {
+          const c = clamp(v, 0, 5);
+          if (!Number.isFinite(c)) return null;
+          if (c <= 0.1) return null; // keep background white when HSI <= 0.1
+          if (c < 1) return 'green';
+          if (c < 2) return 'orange';
+          return 'red';
+        };
+        const colorOf = (zone)=>{
+          if (zone==='green') return getVar('--hsi-bg-green', '#2e7d321a');
+          if (zone==='orange') return getVar('--hsi-bg-orange', '#ef6c001a');
+          if (zone==='red') return getVar('--hsi-bg-red', '#e539351a');
+          return null;
+        };
+
+        let segments = [];
+        for (let i=0;i<hsiSeries.length-1;i++){
+          const p1 = hsiSeries[i], p2 = hsiSeries[i+1];
+          if (p2.x <= xMin || p1.x >= xMax) continue;
+          const x1 = Math.max(xMin, p1.x);
+          const x2 = Math.min(xMax, p2.x);
+          if (x2 <= x1) continue;
+          const z = zoneOf(p1.y);
+          if (!z) continue;
+          segments.push({x1, x2, zone:z});
+        }
+        if (!segments.length) return;
+
+        const merged = [];
+        let cur = null;
+        for (const s of segments){
+          if (!cur) cur = {...s};
+          else if (s.zone===cur.zone && Math.abs(s.x1 - cur.x2) < 1e-6) {
+            cur.x2 = s.x2;
+          } else {
+            merged.push(cur);
+            cur = {...s};
+          }
+        }
+        if (cur) merged.push(cur);
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(plotLeft, plotTop, plotRight - plotLeft, plotBottom - plotTop);
+        ctx.clip();
+
+        for (const s of merged){
+          const x1 = this._sx(s.x1);
+          const x2 = this._sx(s.x2);
+          const c = colorOf(s.zone);
+          if (!c) continue;
+          ctx.fillStyle = c;
+          ctx.fillRect(x1, plotTop, Math.max(0, x2 - x1), plotBottom - plotTop);
+        }
+        ctx.restore();
+      }
+
+      draw(){
+        this._ensureRanges();
+
+        const ctx = this.ctx;
+        const W = this.canvas.clientWidth || (this.canvas.width/this.dpr);
+        const H = this.canvas.clientHeight || (this.canvas.height/this.dpr);
+
+        ctx.save();
+        ctx.setTransform(1,0,0,1,0,0);
+        ctx.clearRect(0,0,this.canvas.width,this.canvas.height);
+        ctx.setTransform(this.dpr,0,0,this.dpr,0,0);
+
+        // Compute ticks once
+        const [xMin,xMax] = this.xRange;
+        const xTicks = niceTicks(xMin, xMax, 6);
+        const lTicks = niceTicks(this.yLeft[0], this.yLeft[1], 5);
+        const rTicks = niceTicks(this.yRight[0], this.yRight[1], 5);
+
+        // Clip and draw backgrounds + series
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(this.margins.left, this.margins.top, W - this.margins.left - this.margins.right, H - this.margins.top - this.margins.bottom);
+        ctx.clip();
+
+        // Backgrounds
+        this._drawHSIBackground();
+        this._drawElevationBackground();
+
+        // Series lines
+        for (const s of this.series) {
+          if (!s || !s.visible || !s.points || s.points.length===0) continue;
+          ctx.strokeStyle = s.color;
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          let first = true;
+          const sy = (s.axis==='left') ? (y)=>this._syLeft(y) : (y)=>this._syRight(y);
+          const maxPts = 5000;
+          const step = Math.max(1, Math.floor(s.points.length / maxPts));
+          for (let i=0;i<s.points.length;i+=step) {
+            const p = s.points[i];
+            if (!Number.isFinite(p.y)) continue;
+            const x = this._sx(p.x);
+            const y = sy(p.y);
+            if (first) { ctx.moveTo(x,y); first=false; } else ctx.lineTo(x,y);
+          }
+          ctx.stroke();
+        }
+
+        // Selection rectangle
+        if (this.dragging) {
+          const x1 = this.selStartPx, x2 = this.selEndPx;
+          const left = Math.min(x1,x2), right = Math.max(x1,x2);
+          const top = this.margins.top, bottom = H - this.margins.bottom;
+          ctx.fillStyle = getVar('--select','#4fc3f733');
+          ctx.strokeStyle = getVar('--select-border','#4fc3f7aa');
+          ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.rect(left, top, right-left, bottom-top); ctx.fill(); ctx.stroke();
+        }
+
+        // Tooltip/crosshair
+        if (this.tooltip.active && !this.dragging) {
+          const xPix = this.tooltip.x;
+          ctx.strokeStyle = '#00000033';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(xPix, this.margins.top);
+          ctx.lineTo(xPix, H - this.margins.bottom);
+          ctx.stroke();
+
+          const info = this.tooltip.nearest || [];
+          if (info.length) {
+            const pad = 6;
+            const lines = [];
+            let tStr = '';
+            for (const item of info) if (item.id === 'time') tStr = item.text;
+            if (tStr) lines.push(tStr);
+            for (const item of info) if (item.id!=='time') lines.push(item.text);
+            ctx.font = '12px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial';
+            const widths = lines.map(s=>ctx.measureText(s).width);
+            const bw = (widths.length ? Math.max(...widths) : 0) + pad*2;
+            const bh = lines.length*16 + pad*2;
+            let bx = xPix + 8, by = this.margins.top + 8;
+            const Wc = this.canvas.clientWidth || (this.canvas.width/this.dpr);
+            if (bx + bw > Wc - 4) bx = xPix - 8 - bw;
+            if (bx < 4) bx = 4;
+            ctx.fillStyle = '#ffffffee';
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.rect(bx, by, bw, bh); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#111827';
+            for (let i=0;i<lines.length;i++){
+              ctx.fillText(lines[i], bx+pad, by+pad+ (i*16));
+            }
+          }
+        }
+
+        ctx.restore(); // end clip
+
+        // Grid lines
+        ctx.strokeStyle = getVar('--grid','#2a2f37');
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (const tv of xTicks) {
+          const x = this._sx(tv);
+          ctx.moveTo(x, this.margins.top);
+          ctx.lineTo(x, H - this.margins.bottom);
+        }
+        ctx.stroke();
+
+        ctx.beginPath();
+        for (const yv of lTicks) {
+          const y = this._syLeft(yv);
+          ctx.moveTo(this.margins.left, y);
+          ctx.lineTo(W - this.margins.right, y);
+        }
+        ctx.stroke();
+
+        // Axis labels
+        ctx.fillStyle = '#475569';
+        ctx.font = '12px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        for (const tv of xTicks) {
+          const x = this._sx(tv);
+          ctx.fillText(fmtHMS(tv), x, H - this.margins.bottom + 6);
+        }
+
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        for (const yv of lTicks) {
+          const y = this._syLeft(yv);
+          ctx.fillText((Math.round(yv*10)/10).toFixed(1), this.margins.left - 6, y);
+        }
+
+        ctx.textAlign = 'left';
+        for (const yv of rTicks) {
+          const y = this._syRight(yv);
+          ctx.fillText((Math.round(yv*10)/10).toFixed(1), W - this.margins.right + 6, y);
+        }
+
+        ctx.restore();
+      }
+      _updateTooltipNearest(){
+        const [xMin,xMax] = this.xRange;
+        const plotW = this._plotWidth();
+        const x = xMin + ( (this.tooltip.x - this.margins.left) / plotW ) * (xMax - xMin);
+        const nearest = [];
+        nearest.push({id:'time', text:'t = ' + fmtHMS(clamp(x, xMin, xMax))});
+        for (const s of this.series) {
+          if (!s || !s.visible || !s.points || s.points.length===0) continue;
+          const idx = this._bisectX(s.points, x);
+          let best = null;
+          for (const j of [idx-1, idx, idx+1]) {
+            if (j>=0 && j < s.points.length) {
+              const p = s.points[j];
+              const dx = Math.abs(p.x - x);
+              if (!best || dx < best.dx) best = {p, dx};
+            }
+          }
+          if (best) {
+            const val = best.p.y;
+            const vtxt = s.fmt ? s.fmt(val) : String(val);
+            nearest.push({id:s.id, text:`${s.name}: ${vtxt}`});
+          }
+        }
+        this.tooltip.nearest = nearest;
+      }
+      _bisectX(arr, x){
+        let lo=0, hi=arr.length-1;
+        while (lo<=hi){
+          const mid = (lo+hi)>>1;
+          if (arr[mid].x < x) lo = mid+1;
+          else hi = mid-1;
+        }
+        return lo;
+      }
+    }
+
+    const fileInput = document.getElementById('file');
+    const messageEl = document.getElementById('message');
+    const statsEl = document.getElementById('stats');
+    const resetBtn = document.getElementById('resetBtn');
+    const zoomModeBtn = document.getElementById('zoomModeBtn');
+    const zoomClearBtn = document.getElementById('zoomClearBtn');
+    const mapBtn = document.getElementById('mapBtn');
+    const smoothSlider = document.getElementById('smoothSlider');
+    const smoothText = document.getElementById('smoothText');
+    const deviceNameEl = document.getElementById('deviceName');
+
+    const canvas = document.getElementById('chart');
+    const chart = new LineChart(canvas);
+
+    const toggles = {
+      hr:   document.getElementById('toggle-hr'),
+      core: document.getElementById('toggle-core'),
+      skin: document.getElementById('toggle-skin'),
+      hsi:  document.getElementById('toggle-hsi'),
+      dist: document.getElementById('toggle-dist'),
+      pace: document.getElementById('toggle-pace'),
+      cad:  document.getElementById('toggle-cad'),
+      trim: document.getElementById('toggle-trim'),
+    };
+
+    const toggleStates = {
+      hr:   document.getElementById('state-hr'),
+      core: document.getElementById('state-core'),
+      skin: document.getElementById('state-skin'),
+      hsi:  document.getElementById('state-hsi'),
+      dist: document.getElementById('state-dist'),
+      pace: document.getElementById('state-pace'),
+      cad:  document.getElementById('state-cad'),
+      trim: document.getElementById('state-trim'),
+    };
+
+    function refreshToggleStates(){
+      for (const [key, el] of Object.entries(toggleStates)) {
+        const on = !!toggles[key]?.checked;
+        if (el) el.textContent = on ? 'On' : 'Off';
+      }
+    }
+
+    for (const el of Object.values(toggles)) {
+      el.addEventListener('change', ()=>{ refreshToggleStates(); renderChart(); updateStatsUI(); });
+    }
+    refreshToggleStates();
+
+    let current = {
+      records: [],
+      devDesc: new Map(),
+      fileIds: [],
+      deviceInfos: [],
+      fileCreators: [],
+      manufacturer: null,
+
+      baseTime: 0,
+
+      hrRaw:   [],
+      coreRaw: [],
+      skinRaw: [],
+      hsiRaw:  [],
+      distRaw: [],
+      paceRaw: [],
+      cadRaw:  [],
+      elevRaw: [],
+
+      hrSeries:   [],
+      coreSeries: [],
+      skinSeries: [],
+      hsiSeries:  [],
+      distSeries: [],
+      paceSeries: [],
+      cadSeries:  [],
+      elevSeries: [],
+
+      coreKey: null,
+      skinKey: null,
+      coreScale: 1,
+      skinScale: 1,
+      coreOffset: 0,
+      skinOffset: 0,
+
+      tauSec: 0,
+      cutoffX: 0,
+      selection: null,
+
+      zoomMode: false
+    };
+
+    function setSmoothingUI(tau){
+      current.tauSec = Math.max(0, tau||0);
+      smoothText.textContent = 'Smoothing: ' + fmtS(current.tauSec);
+    }
+    function sliderToTau(val){
+      const pct = clamp(Number(val)||0, 0, 100) / 100;
+      return pct * 30;
+    }
+    smoothSlider.addEventListener('input', ()=>{
+      const tau = sliderToTau(smoothSlider.value);
+      setSmoothingUI(tau);
+      recalcSmoothing();
+      renderChart();
+      updateStatsUI();
+    });
+
+    zoomModeBtn.addEventListener('click', ()=>{
+      current.zoomMode = !current.zoomMode;
+      chart.setZoomMode(current.zoomMode);
+      zoomModeBtn.textContent = current.zoomMode ? 'Zoom: On' : 'Zoom: Off';
+      messageEl.textContent = current.zoomMode
+        ? 'Zoom mode is ON. Drag to select a time range. Use “Clear Zoom” to reset.'
+        : 'Zoom mode is OFF. Slide your finger across the graph to inspect values.';
+    });
+
+    zoomClearBtn.addEventListener('click', ()=>{
+      current.selection = null;
+      zoomClearBtn.disabled = true;
+      renderChart();
+      updateStatsUI();
+    });
+
+    resetBtn.addEventListener('click', ()=>{
+      fileInput.value = '';
+      messageEl.textContent = 'Load a .FIT file. Zoom mode is OFF by default so you can slide across the graph to see values. Turn Zoom mode ON to drag-select a time range. All parsing and rendering happen locally.';
+      statsEl.textContent = '';
+      deviceNameEl.textContent = '';
+      mapBtn.disabled = true;
+      zoomClearBtn.disabled = true;
+      zoomModeBtn.disabled = true;
+      resetBtn.disabled = true;
+      current = {
+        records: [], devDesc: new Map(), fileIds: [], deviceInfos: [], fileCreators: [],
+        baseTime: 0,
+        hrRaw: [], coreRaw: [], skinRaw: [], hsiRaw: [], distRaw: [], paceRaw: [], cadRaw: [], elevRaw: [],
+        hrSeries: [], coreSeries: [], skinSeries: [], hsiSeries: [], distSeries: [], paceSeries: [], cadSeries: [], elevSeries: [],
+        coreKey: null, skinKey: null, coreScale: 1, skinScale: 1, coreOffset: 0, skinOffset: 0,
+        tauSec: 0, cutoffX: 0, selection: null, zoomMode: false
+      };
+      chart.setZoomMode(false);
+      smoothSlider.value = "75";
+      setSmoothingUI(sliderToTau(75));
+      chart.setSeries([], []);
+    });
+
+    chart.onSelectRange = (range)=>{
+      if (!range) return;
+      const x1 = Math.max(range[0], current.cutoffX);
+      const x2 = Math.max(x1, range[1]);
+      current.selection = [x1, x2];
+      zoomClearBtn.disabled = false;
+      renderChart();
+      updateStatsUI();
+    };
+
+    fileInput.addEventListener('change', async (e)=>{
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      resetBtn.disabled = false;
+      zoomModeBtn.disabled = false;
+      messageEl.textContent = 'Parsing...';
+      statsEl.textContent = '';
+      mapBtn.disabled = true;
+      zoomClearBtn.disabled = true;
+
+      try {
+        const buf = await file.arrayBuffer();
+        const parser = new FitParser();
+        const { records, devFieldDescriptions, fileIds, deviceInfos, fileCreators } = parser.parse(buf);
+
+        current.records = records;
+        current.devDesc = devFieldDescriptions;
+        current.fileIds = fileIds;
+        current.deviceInfos = deviceInfos;
+        current.fileCreators = fileCreators;
+        current.manufacturer = (function(){
+          const pick = (deviceInfos&&deviceInfos[0]) ? deviceInfos[0] : (fileIds&&fileIds[0]);
+          const f = (pick && pick.fields) || {};
+          return (typeof f[2] === 'number') ? f[2] : null;
+        })();
+
+        deviceNameEl.textContent = computeDeviceStringFromCreator(deviceInfos, fileIds, fileCreators);
+
+        if (!records.length) throw new Error('No record data found');
+
+        // Elapsed time
+        let firstTs = undefined;
+        for (const r of records) {
+          if (typeof r.timestamp === 'number' && r.timestamp>0) { firstTs = r.timestamp; break; }
+        }
+        if (firstTs === undefined) {
+          records.forEach((r,i)=>r._elapsed = i);
+          messageEl.textContent = 'Warning: No timestamps found. Using sample index as elapsed time.';
+        } else {
+          records.forEach(r => r._elapsed = (r.timestamp - firstTs));
+          messageEl.textContent = 'Parsed. Zoom OFF: slide to inspect; Zoom ON: drag-select.';
+        }
+        current.baseTime = firstTs || 0;
+
+        // Extract base fields
+        const hrRaw = [];
+        const distKmRaw = [];
+        const paceRaw = [];
+        const cadRaw = [];
+        const elevRaw = [];
+
+        let prevDcm = null;
+        let prevT = null;
+
+        for (const r of records) {
+          const t = r._elapsed;
+
+          const hr = r.fields[3];
+          if (typeof hr === 'number' && hr>0 && hr<255) hrRaw.push({x:t, y:hr});
+
+          const c = r.fields[4];
+          if (typeof c === 'number' && isFinite(c)) {
+            let cadVal = c;
+            if (current.manufacturer === 1) cadVal = c * 2; // Garmin cadence in steps/stride -> spm
+            cadRaw.push({x:t, y: cadVal});
+          }
+
+          const dRaw = r.fields[5];
+          if (typeof dRaw === 'number' && isFinite(dRaw)) {
+            const dKm = dRaw / 100000; // cm -> km
+            distKmRaw.push({x:t, y:dKm});
+          }
+
+          // Pace: prefer field 6 (speed) when reliable; otherwise try field 134; otherwise distance delta
+          const rawEnh134 = r.fields[134];
+          const rawSpeed = r.fields[6]; // may be scaled
+          let pace = NaN;
+
+          const decodeSpeed = (v)=>{
+            if (typeof v !== 'number' || !isFinite(v)) return NaN;
+            if (v > 25) return v/1000; // scaled by 1000
+            return v;
+          };
+          const fromSpeed = (v)=>{
+            const s = decodeSpeed(v);
+            return (typeof s==='number' && isFinite(s) && s>0.05) ? (1000/s)/60 : NaN;
+          };
+
+          // Use field 6 first if plausible (>0.05 m/s)
+          if (rawSpeed !== undefined) pace = fromSpeed(rawSpeed);
+          // Else try field 134, but only if plausible
+          if (!isFinite(pace) && rawEnh134 !== undefined) {
+            const s134 = decodeSpeed(rawEnh134);
+            if (isFinite(s134) && s134>0.05) pace = (1000/s134)/60;
+          }
+
+          if (!isFinite(pace)) {
+            if (typeof dRaw === 'number' && isFinite(dRaw) && prevDcm!=null && prevT!=null) {
+              const dd_cm = dRaw - prevDcm;
+              const dt = t - prevT;
+              if (dt > 0 && dd_cm >= 0) {
+                const v = (dd_cm/100) / dt; // m/s
+                if (v > 0.05) pace = (1000/v)/60;
+              }
+            }
+          }
+          paceRaw.push({x:t, y: isFinite(pace) ? pace : NaN});
+
+          // Enhanced altitude (meters, can be negative)
+          const enhancedAlt = r.fields[78];
+          if (typeof enhancedAlt === 'number' && isFinite(enhancedAlt)) {
+            elevRaw.push({x:t, y: enhancedAlt});
+          }
+
+          if (typeof dRaw === 'number' && isFinite(dRaw)) { prevDcm = dRaw; prevT = t; }
+        }
+        current.hrRaw = hrRaw;
+        current.distRaw = distKmRaw;
+        current.paceRaw = paceRaw;
+        current.cadRaw = cadRaw;
+
+        // Developer fields: Core/Skin temps
+        const allDevKeys = new Set();
+        for (const rec of records) for (const k in rec.dev) allDevKeys.add(k);
+        const candidates = Array.from(allDevKeys);
+
+        let coreKey = null, skinKey = null;
+
+        // COROS specific: standard record field 139 appears to be core temp in centi-deg C
+        // If manufacturer is COROS (167), build a coreRaw from field 139 / 100, and search for a skin-like field ~6-10C lower.
+        if (current.manufacturer === 167) {
+          const core139 = [];
+          for (const r of records) {
+            const v = r.fields[139];
+            if (typeof v === 'number' && isFinite(v)) core139.push({x:r._elapsed, y:v/100});
+          }
+          if (core139.length) {
+            // Try to find another field with similar trajectory ~6-10C lower (median diff in that range), prefer stable/close track
+            function seriesForField(fid){
+              const arr=[]; for (const r of records){ const v=r.fields[fid]; if (typeof v==='number'&&isFinite(v)) arr.push({x:r._elapsed,y:v}); }
+              return arr;
+            }
+            function median(xs){ const a=xs.filter(Number.isFinite).slice().sort((a,b)=>a-b); if (!a.length) return NaN; const m=Math.floor(a.length/2); return a.length%2? a[m] : (a[m-1]+a[m])/2; }
+            function alignAndDiff(a,b,scaleB=1){
+              let i=0,j=0; const diffs=[]; while (i<a.length && j<b.length){ const ax=a[i].x, bx=b[j].x; if (Math.abs(ax-bx)<1e-6){ diffs.push(a[i].y - b[j].y*scaleB); i++; j++; } else if (ax<bx) i++; else j++; }
+              return diffs;
+            }
+            let bestFid=null, bestScore=-Infinity;
+            for (const fid of Object.keys(records[0]?.fields||{})){
+              const id = Number(fid); if (!Number.isFinite(id) || id===139) continue;
+              const rawB = seriesForField(id); if (rawB.length < core139.length*0.5) continue;
+              const diffs = alignAndDiff(core139, rawB, 1/100); // treat candidate as centi-deg by default
+              if (diffs.length < core139.length*0.3) continue;
+              const md = median(diffs);
+              if (!Number.isFinite(md)) continue;
+              // Score: prefer 6-10 C lower than core, small MAD (not implemented), many samples
+              const gap = Math.abs((md) - 8); // target ~8C
+              const score = -gap + diffs.length*1e-4;
+              if (score > bestScore) { bestScore=score; bestFid=id; }
+            }
+            if (bestFid!=null) {
+              const skinSeries=[]; for (const r of records){ const v=r.fields[bestFid]; if (typeof v==='number'&&isFinite(v)) skinSeries.push({x:r._elapsed,y:v/100}); }
+              current.coreRaw = core139;
+              current.skinRaw = skinSeries;
+            }
+          }
+        }
+        function descFor(k){ return devFieldDescriptions.get(k) || {}; }
+        function looksLikeCore(d){ return d && d.name && /core/i.test(d.name); }
+        function looksLikeSkin(d){ return d && d.name && /skin/i.test(d.name); }
+        function unitsC(d){ return d && d.units && /c|°/i.test(d.units); }
+        for (const k of candidates) {
+          const d = descFor(k);
+          if (unitsC(d) && looksLikeCore(d)) coreKey = coreKey || k;
+          if (unitsC(d) && looksLikeSkin(d)) skinKey = skinKey || k;
+        }
+
+        function seriesFromKey(key){
+          if (!key) return [];
+          const arr=[];
+          const desc = devFieldDescriptions.get(key) || {};
+          const scaleFromDesc = (Number.isFinite(desc.scale) && desc.scale!==0) ? desc.scale : 1;
+          const offsetFromDesc = Number.isFinite(desc.offset) ? desc.offset : 0;
+          for (const rec of records) {
+            const v = rec.dev[key];
+            if (typeof v === 'number' && isFinite(v)) {
+              const y = v * scaleFromDesc + offsetFromDesc;
+              arr.push({x:rec._elapsed, y});
+            }
+          }
+          return arr;
+        }
+
+        const devSeriesByKey = new Map();
+        for (const k of candidates) devSeriesByKey.set(k, seriesFromKey(k));
+
+        function guessTempKey(excludeKey=null){
+          let bestKey=null, bestScore=-Infinity, bestScale=1, bestOffset=0;
+          for (const k of candidates) {
+            if (k===excludeKey) continue;
+            const arr = devSeriesByKey.get(k);
+            if (!arr || arr.length<5) continue;
+            const ys = arr.map(p=>p.y).filter(Number.isFinite).slice().sort((a,b)=>a-b);
+            const mid = ys[Math.floor(ys.length/2)];
+            let score = -Math.abs(mid-37); let scale=1; let offset=0;
+            const d = descFor(k);
+            if (Number.isFinite(d.scale) && d.scale !== 0) scale = d.scale;
+            if (Number.isFinite(d.offset)) offset = d.offset;
+            if (unitsC(d)) score += 2;
+            if (looksLikeCore(d) || looksLikeSkin(d)) score += 1;
+            if (score > bestScore) {bestScore=score; bestKey=k; bestScale=scale; bestOffset=offset;}
+          }
+          return {key:bestKey, scale:bestScale, offset:bestOffset};
+        }
+        if (!coreKey) { const g = guessTempKey(null); coreKey = g.key; current.coreScale = g.scale || 1; current.coreOffset = g.offset || 0; }
+        if (!skinKey) { const g = guessTempKey(coreKey); skinKey = g.key; current.skinScale = g.scale || 1; current.skinOffset = g.offset || 0; }
+
+        function scaledSeries(key, scale=1, offset=0){
+          if (!key) return [];
+          const arr = [];
+          for (const rec of records) {
+            const v = rec.dev[key];
+            if (typeof v === 'number' && isFinite(v)) {
+              const y = v*scale + offset;
+              if (y > -1000 && y < 1000) arr.push({x:rec._elapsed, y});
+            }
+          }
+          return arr;
+        }
+        let coreRaw = scaledSeries(coreKey, current.coreScale, current.coreOffset||0);
+        let skinRaw = scaledSeries(skinKey, current.skinScale, current.skinOffset||0);
+
+        function adjustIfNeeded(series){
+          if (!series.length) return {series, scale:1};
+          const ys = series.map(p=>p.y).sort((a,b)=>a-b);
+          const mid = ys[Math.floor(ys.length/2)];
+          if (mid > 60) return {series: series.map(p=>({x:p.x,y:p.y/100})), scale:0.01};
+          if (mid < 5 && mid > 0.05) return {series: series.map(p=>({x:p.x,y:p.y*10})), scale:10};
+          return {series, scale:1};
+        }
+        if (!coreRaw.length && coreKey) { const alt = adjustIfNeeded(seriesFromKey(coreKey)); coreRaw = alt.series; current.coreScale *= alt.scale; /* offset remains user-controlled */ }
+        if (!skinRaw.length && skinKey) { const alt = adjustIfNeeded(seriesFromKey(skinKey)); skinRaw = alt.series; current.skinScale *= alt.scale; /* offset remains user-controlled */ }
+
+        current.coreKey = coreKey || null;
+        current.skinKey = skinKey || null;
+        current.coreRaw = coreRaw;
+        current.skinRaw = skinRaw;
+
+        // HSI detection: "heat strain index"
+        const hsiKey = detectHSIKey(devFieldDescriptions);
+        current.hsiRaw = [];
+        if (hsiKey) {
+          for (const rec of records) {
+            const v = rec.dev[hsiKey];
+            if (typeof v === 'number' && isFinite(v)) current.hsiRaw.push({x:rec._elapsed, y:clamp(v, 0, 5)});
+          }
+        }
+
+        // If no base enhanced_altitude, try dev field by name
+        if (!elevRaw.length) {
+          const elevKey = detectEnhancedAltitudeDevKey(devFieldDescriptions);
+          if (elevKey) {
+            for (const rec of records) {
+              const v = rec.dev[elevKey];
+              if (typeof v === 'number' && isFinite(v)) elevRaw.push({x:rec._elapsed, y:v});
+            }
+          }
+        }
+        current.elevRaw = elevRaw;
+
+        const tau = sliderToTau(smoothSlider.value);
+        setSmoothingUI(tau);
+        recalcSmoothing();
+
+        updateCutoff();
+
+        current.selection = null;
+        zoomClearBtn.disabled = true;
+        renderChart();
+        updateStatsUI();
+
+        const parts = [];
+        parts.push('Parsed ' + (records.length) + ' records. Zoom OFF: slide to inspect; Zoom ON: drag-select.');
+        if (!current.hrRaw.length) parts.push('No heart rate found.');
+        if (!current.coreRaw.length) parts.push('Core temp not auto-detected. Use “Map Fields”.');
+        if (!current.skinRaw.length) parts.push('Skin temp not auto-detected. Use “Map Fields”.');
+        if (!current.hsiRaw.length) parts.push('Heat Strain Index not found (developer field “heat strain index”).');
+        if (!current.elevRaw.length) parts.push('Enhanced altitude not found; elevation background will be hidden.');
+        messageEl.textContent = parts.join(' ');
+
+        mapBtn.disabled = (candidates.length === 0);
+      } catch (err) {
+        console.error(err);
+        messageEl.innerHTML = '<span class="error">Error: ' + (err && err.message ? err.message : String(err)) + '</span>';
+      }
+    });
+
+    function detectHSIKey(devDesc){
+      for (const [k, d] of devDesc.entries()) {
+        const name = (d.name||'').toLowerCase().trim();
+        if (!name) continue;
+        if (name === 'heat strain index') return k;
+        if ((name.includes('heat') && name.includes('strain')) || name.includes('hsi')) return k;
+      }
+      return null;
+    }
+
+    function detectEnhancedAltitudeDevKey(devDesc){
+      for (const [k, d] of devDesc.entries()) {
+        const nm = (d.name||'').toLowerCase().trim();
+        if (!nm) continue;
+        if (nm === 'enhanced altitude') return k;
+        if (nm.includes('enhanced') && nm.includes('altitude')) return k;
+      }
+      return null;
+    }
+
+    function smoothZeroPhase(points, tauSec){
+      if (!points || points.length === 0 || !isFinite(tauSec) || tauSec <= 0) return (points||[]).slice();
+
+      let i0 = 0;
+      while (i0 < points.length && !Number.isFinite(points[i0].y)) i0++;
+      if (i0 >= points.length) return points.map(p=>({x:p.x, y:NaN}));
+
+      const f = new Array(points.length);
+      let y = points[i0].y;
+      for (let i=0;i<=i0;i++) f[i] = {x:points[i].x, y};
+      for (let i=i0+1; i<points.length; i++){
+        const dt = Math.max(0, points[i].x - points[i-1].x);
+        const alpha = 1 - Math.exp(-dt / tauSec);
+        const v = Number.isFinite(points[i].y) ? points[i].y : y;
+        y = y + alpha * (v - y);
+        f[i] = {x: points[i].x, y};
+      }
+
+      const b = new Array(points.length);
+      let yb = f[points.length-1].y;
+      b[points.length-1] = {x: f[points.length-1].x, y: yb};
+      for (let i=points.length-2; i>=0; i--){
+        const dt = Math.max(0, f[i+1].x - f[i].x);
+        const alpha = 1 - Math.exp(-dt / tauSec);
+        const v = Number.isFinite(f[i].y) ? f[i].y : yb;
+        yb = yb + alpha * (v - yb);
+        b[i] = {x: f[i].x, y: yb};
+      }
+      return b;
+    }
+
+    function recalcSmoothing(){
+      const tau = current.tauSec || 0;
+      current.hrSeries   = smoothZeroPhase(current.hrRaw,   tau);
+      current.coreSeries = smoothZeroPhase(current.coreRaw, tau);
+      current.skinSeries = smoothZeroPhase(current.skinRaw, tau);
+      current.hsiSeries  = smoothZeroPhase(current.hsiRaw,  tau);
+      current.distSeries = smoothZeroPhase(current.distRaw, tau);
+      current.paceSeries = smoothZeroPhase(current.paceRaw, tau);
+      current.cadSeries  = smoothZeroPhase(current.cadRaw,  tau);
+      current.elevSeries = smoothZeroPhase(current.elevRaw, Math.min(10, tau || 3));
+    }
+
+    function updateCutoff(){
+      let cut = 0;
+      const eps = 1e-9;
+      if (current.coreRaw && current.coreRaw.length) {
+        for (const p of current.coreRaw) {
+          if (Number.isFinite(p.y) && p.y > 0 + eps) { cut = p.x; break; }
+        }
+      }
+      current.cutoffX = cut;
+    }
+
+    function inView(x){
+      if (toggles.trim && toggles.trim.checked) {
+        if (x < current.cutoffX) return false;
+      }
+      if (current.selection) {
+        if (x < current.selection[0] || x > current.selection[1]) return false;
+      }
+      return true;
+    }
+    function filterPoints(arr){ return (arr||[]).filter(p => inView(p.x)); }
+
+    function renderChart(){
+      const series = [
+        { id:'core', name:'Core Temp',  color:getVar('--core','#1e88e5'), axis:'left',  visible: toggles.core.checked, points: filterPoints(current.coreSeries), fmt:(v)=> `${(Math.round(v*100)/100).toFixed(2)} °C` },
+        { id:'skin', name:'Skin Temp',  color:getVar('--skin','#fb8c00'), axis:'left',  visible: toggles.skin.checked, points: filterPoints(current.skinSeries), fmt:(v)=> `${(Math.round(v*100)/100).toFixed(2)} °C` },
+
+        { id:'hr',   name:'Heart Rate', color:getVar('--hr','#e53935'),   axis:'right', visible: toggles.hr.checked,   points: filterPoints(current.hrSeries),   fmt:(v)=> `${Math.round(v)} bpm` },
+        { id:'hsi',  name:'HSI',        color:getVar('--hsi','#ab47bc'),  axis:'right', visible: toggles.hsi.checked,  points: filterPoints(current.hsiSeries),  fmt:(v)=> Number.isFinite(v)? (Math.round(v*100)/100).toFixed(2):'--' },
+        { id:'dist', name:'Distance',   color:getVar('--dist','#66bb6a'), axis:'right', visible: toggles.dist.checked, points: filterPoints(current.distSeries), fmt:(v)=> Number.isFinite(v)? (Math.round(v*100)/100).toFixed(2)+' km':'--' },
+        { id:'pace', name:'Pace',       color:getVar('--pace','#26c6da'), axis:'right', visible: toggles.pace.checked, points: filterPoints(current.paceSeries), fmt:(v)=> fmtPace(v) },
+        { id:'cad',  name:'Cadence',    color:getVar('--cad','#ffd54f'),  axis:'right', visible: toggles.cad.checked,  points: filterPoints(current.cadSeries),  fmt:(v)=> Number.isFinite(v)? Math.round(v)+' spm':'--' },
+      ];
+      const elev = filterPoints(current.elevSeries);
+      chart.setSeries(series, elev);
+    }
+
+    function arrayMaxInView(arr){
+      if (!arr || !arr.length) return null;
+      let m = -Infinity;
+      for (const p of arr) {
+        if (!inView(p.x)) continue;
+        if (Number.isFinite(p.y)) m = Math.max(m, p.y);
+      }
+      return (m===-Infinity) ? null : m;
+    }
+
+    function arrayMinInView(arr){
+      if (!arr || !arr.length) return null;
+      let m = Infinity;
+      for (const p of arr) {
+        if (!inView(p.x)) continue;
+        if (Number.isFinite(p.y)) m = Math.min(m, p.y);
+      }
+      return (m===Infinity) ? null : m;
+    }
+
+    function updateStatsUI(){
+      const hrMax   = arrayMaxInView(current.hrRaw);
+      const coreMax = arrayMaxInView(current.coreRaw);
+      const skinMax = arrayMaxInView(current.skinRaw);
+
+      const parts = [
+        `<span>Max Core: <span class="kbd">${coreMax!=null ? (Math.round(coreMax*100)/100).toFixed(2)+' °C' : '--'}</span></span>`,
+        `<span>Max Skin: <span class="kbd">${skinMax!=null ? (Math.round(skinMax*100)/100).toFixed(2)+' °C' : '--'}</span></span>`,
+        `<span>Max HR: <span class="kbd">${hrMax!=null ? Math.round(hrMax)+' bpm' : '--'}</span></span>`,
+        `<span>Window: <span class="kbd">${fmtHMS(viewDuration())}</span></span>`
+      ];
+
+      if (toggles.hsi.checked) {
+        const h = arrayMaxInView(current.hsiRaw);
+        parts.push(`<span>Max HSI: <span class="kbd">${h!=null ? (Math.round(h*100)/100).toFixed(2) : '--'}</span></span>`);
+      }
+      if (toggles.dist.checked) {
+        const d = arrayMaxInView(current.distRaw);
+        parts.push(`<span>Max Distance: <span class="kbd">${d!=null ? (Math.round(d*100)/100).toFixed(2)+' km' : '--'}</span></span>`);
+      }
+      if (toggles.pace.checked) {
+        const p = arrayMinInView(current.paceRaw);
+        parts.push(`<span>Best Pace: <span class="kbd">${p!=null ? fmtPace(p) : '--'}</span></span>`);
+      }
+      if (toggles.cad.checked) {
+        const c = arrayMaxInView(current.cadRaw);
+        parts.push(`<span>Max Cadence: <span class="kbd">${c!=null ? Math.round(c)+' spm' : '--'}</span></span>`);
+      }
+
+      statsEl.innerHTML = parts.join(' ');
+    }
+
+    function viewDuration(){
+      let start = (toggles.trim && toggles.trim.checked) ? current.cutoffX : 0;
+      let end = (current.records.length ? current.records[current.records.length-1]._elapsed : 0);
+      if (current.selection) {
+        start = Math.max(start, current.selection[0]);
+        end = Math.min(end, current.selection[1]);
+      }
+      return Math.max(0, end - start);
+    }
+
+    const modalBackdrop = document.getElementById('modalBackdrop');
+    const modalEl = document.querySelector('.modal');
+    const coreSelect = document.getElementById('coreSelect');
+    const skinSelect = document.getElementById('skinSelect');
+    const coreScaleInput = document.getElementById('coreScale');
+    const skinScaleInput = document.getElementById('skinScale');
+    const coreOffsetInput = document.getElementById('coreOffset');
+    const skinOffsetInput = document.getElementById('skinOffset');
+    const cancelMap = document.getElementById('cancelMap');
+    const applyMap = document.getElementById('applyMap');
+    const mapHint = document.getElementById('mapHint');
+
+    let lastFocusEl = null;
+
+    mapBtn.addEventListener('click', ()=>{
+      const devKeys = getAllDeveloperKeys(current.records);
+      if (devKeys.length === 0) {
+        messageEl.textContent = 'No developer fields found in this file.';
+        return;
+      }
+      coreSelect.innerHTML = '';
+      skinSelect.innerHTML = '';
+      const opts = devKeys.map(k => {
+        const desc = current.devDesc.get(k) || {};
+        const label = niceDevLabel(k, desc, current.records);
+        return {k, label};
+      });
+      for (const {k,label} of opts) {
+        const o1 = document.createElement('option'); o1.value = k; o1.textContent = label; coreSelect.appendChild(o1);
+        const o2 = document.createElement('option'); o2.value = k; o2.textContent = label; skinSelect.appendChild(o2);
+      }
+      if (current.coreKey) coreSelect.value = current.coreKey;
+      if (current.skinKey) skinSelect.value = current.skinKey;
+      coreScaleInput.value = String(current.coreScale || 1);
+      skinScaleInput.value = String(current.skinScale || 1);
+      coreOffsetInput.value = String(current.coreOffset || 0);
+      skinOffsetInput.value = String(current.skinOffset || 0);
+      mapHint.innerHTML = sampleHintHTML(current.records, devKeys);
+
+      lastFocusEl = document.activeElement;
+      modalBackdrop.style.display = 'flex';
+      setTimeout(()=>{ modalEl.focus(); }, 0);
+    });
+
+    function closeModal(){
+      modalBackdrop.style.display='none';
+      if (lastFocusEl && typeof lastFocusEl.focus === 'function') lastFocusEl.focus();
+    }
+
+    cancelMap.addEventListener('click', closeModal);
+
+    applyMap.addEventListener('click', ()=>{
+      const coreKey = coreSelect.value || null;
+      const skinKey = skinSelect.value || null;
+      let coreScale = parseFloat(coreScaleInput.value); if (!Number.isFinite(coreScale) || coreScale===0) coreScale = 1;
+      let skinScale = parseFloat(skinScaleInput.value); if (!Number.isFinite(skinScale) || skinScale===0) skinScale = 1;
+      let coreOffset = parseFloat(coreOffsetInput.value); if (!Number.isFinite(coreOffset)) coreOffset = 0;
+      let skinOffset = parseFloat(skinOffsetInput.value); if (!Number.isFinite(skinOffset)) skinOffset = 0;
+
+      current.coreKey = coreKey; current.skinKey = skinKey;
+      current.coreScale = coreScale; current.skinScale = skinScale;
+      current.coreOffset = coreOffset; current.skinOffset = skinOffset;
+
+      const coreRaw = [];
+      const skinRaw = [];
+      for (const r of current.records) {
+        if (coreKey && typeof r.dev[coreKey] === 'number' && isFinite(r.dev[coreKey])) {
+          coreRaw.push({x:r._elapsed, y:r.dev[coreKey]*coreScale + coreOffset});
+        }
+        if (skinKey && typeof r.dev[skinKey] === 'number' && isFinite(r.dev[skinKey])) {
+          skinRaw.push({x:r._elapsed, y:r.dev[skinKey]*skinScale + skinOffset});
+        }
+      }
+      current.coreRaw = coreRaw;
+      current.skinRaw = skinRaw;
+
+      recalcSmoothing();
+      updateCutoff();
+      renderChart();
+      updateStatsUI();
+
+      const parts = [];
+      parts.push('Updated mapping.');
+      if (!coreRaw.length) parts.push('No core temp points with this mapping.');
+      if (!skinRaw.length) parts.push('No skin temp points with this mapping.');
+      messageEl.textContent = parts.join(' ');
+
+      closeModal();
+    });
+
+    modalBackdrop.addEventListener('keydown', (e)=>{
+      if (e.key === 'Escape') { e.preventDefault(); closeModal(); }
+      if (e.key === 'Tab') {
+        // simple focus trap: keep focus within modal
+        const focusables = modalBackdrop.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        const list = Array.from(focusables).filter(el=> el.offsetParent !== null);
+        if (list.length === 0) return;
+        const first = list[0], last = list[list.length-1];
+        if (e.shiftKey) {
+          if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+        } else {
+          if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+        }
+      }
+    });
+
+    function getAllDeveloperKeys(records){
+      const set = new Set();
+      for (const r of records) for (const k in r.dev) set.add(k);
+      return Array.from(set);
+    }
+
+    function niceDevLabel(key, desc, records){
+      const sample = (() => { for (const r of records) if (typeof r.dev[key] === 'number' && isFinite(r.dev[key])) return r.dev[key]; return null; })();
+      const name = desc?.name ? desc.name : 'Field ' + key;
+      const units = desc?.units ? ' ' + desc.units : '';
+      const val = (sample!=null) ? ` [ex: ${Math.round(sample*100)/100}]` : '';
+      return name + (units ? ` (${units.trim()})` : '') + ' -- ' + key + val;
+    }
+
+    function sampleHintHTML(records, devKeys){
+      let html = 'First sample values per field: ';
+      const parts = [];
+      for (const k of devKeys) {
+        let v=null;
+        for (const r of records) if (typeof r.dev[k]==='number') { v=r.dev[k]; break; }
+        if (v!=null) parts.push(`<span class="kbd">${k}</span>: ${Math.round(v*100)/100}`);
+      }
+      html += parts.join(', ');
+      return html;
+    }
+
+    function computeDeviceStringFromCreator(deviceInfos, fileIds, fileCreators){
+      let picked = null;
+      for (const d of deviceInfos||[]) {
+        const f = d.fields||{};
+        if (f[0]===0) { picked = d; break; }
+      }
+      if (!picked && deviceInfos && deviceInfos.length) picked = deviceInfos[0];
+
+      let manuf = null, product = null, serial = null, sw = null, productName = null; let productStr = null;
+      if (picked) {
+        const f = picked.fields||{};
+        manuf = f[2];
+        product = f[4];
+        serial = f[3];
+        sw = f[5];
+        if (typeof f[27] === 'string' && f[27].trim()) productName = f[27].trim(); // product_name
+      }
+      if ((manuf==null || product==null || serial==null) && fileIds && fileIds.length) {
+        const f = fileIds[0].fields||{};
+        if (manuf==null) manuf = f[1];
+        if (product==null) product = f[2];
+        if (serial==null) serial = f[3];
+      }
+      if (sw==null && fileCreators && fileCreators.length) {
+        const fc = fileCreators[0].fields||{};
+        if (typeof fc[0] === 'number') {
+          sw = fc[0];
+        }
+      }
+      // Normalize sw to xx.yy by dividing by 100 when numeric
+      if (typeof sw === 'number') sw = sw/100;
+
+      const brandStr = (typeof manuf === 'number' && MANUFACTURERS[manuf]) ? MANUFACTURERS[manuf] : (manuf!=null ? String(manuf) : 'Unknown');
+
+      // Prefer product_name string if available (e.g., 'fr55'), with normalization
+      let prodStr = productName || null;
+      if (!prodStr) {
+        // Fallback to numeric code (product ID)
+        if (brandStr === 'Garmin' && product!=null) {
+          const garminMap = {
+            // Common Forerunners (subset; extend as needed)
+            2691: 'Forerunner 45', 2693: 'Forerunner 45S',
+            3869: 'Forerunner 55',
+            2713: 'Forerunner 245', 2729: 'Forerunner 245 Music',
+            3315: 'Forerunner 255', 3321: 'Forerunner 255S', 3329: 'Forerunner 255 Music',
+            2711: 'Forerunner 645', 2712: 'Forerunner 645 Music',
+            3510: 'Forerunner 745',
+            2710: 'Forerunner 935',
+            3284: 'Forerunner 945', 3512: 'Forerunner 945 LTE',
+            4000: 'Forerunner 955', 4015: 'Forerunner 965',
+            // Fenix (partial examples)
+            3192: 'Fenix 6', 3195: 'Fenix 6 Pro', 3358: 'Fenix 7', 3891: 'Fenix 7 Pro',
+            // Edge (partial examples)
+            1030: 'Edge 1030', 2962: 'Edge 530', 3003: 'Edge 830',
+            // Venu/Vivoactive (partial examples)
+            3785: 'Venu 2', 3812: 'Venu 2S', 3482: 'Vivoactive 4',
+          };
+          prodStr = garminMap[product] || String(product);
+        } else {
+          prodStr = (product!=null ? String(product) : 'Unknown');
+        }
+      }
+      prodStr = normalizeProductName(brandStr, prodStr);
+
+      // Build optional details only if present
+      const details = [];
+      if (sw!=null) {
+        let swStr = String(sw);
+        if (typeof sw === 'number' && sw % 1 !== 0) swStr = (Math.round(sw*100)/100).toFixed(2);
+        details.push(`sw version = ${swStr}`);
+      }
+      if (serial!=null) {
+        details.push(`serial = ${String(serial)}`);
+      }
+      const detailsStr = details.length ? ` (${details.join(', ')})` : '';
+      return `${brandStr} ${prodStr}${detailsStr}`;
+    }
+
+    setSmoothingUI(sliderToTau(smoothSlider.value));
+    chart.setZoomMode(false);
+  </script>
 </body>
 </html>
