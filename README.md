@@ -6,6 +6,19 @@ Mobile-first, client-side FIT file viewer for heart rate, core/skin temperature,
 - Demo/Hosting: single static HTML (index.html). Host on GitHub Pages or serve locally.
 - Privacy: 100% in-browser; your .fit files never leave your device.
 
+## Features (v1.1.0)
+- Local .FIT parsing; developer field mapping (core/skin)
+- Dual-axis chart with zero-phase smoothing (0–30 s)
+- HSI background bands:
+- <1 green, 1–<2 orange, ≥2 red
+- Elevation backdrop behind the series (auto-scaled)
+- Route canvas (offline), tightly fit to track; start/end markers
+- Touch-friendly:
+- Zoom OFF: finger slide to inspect with crosshair
+- Zoom ON: drag-select time window; Clear Zoom to reset
+- Pace from enhanced speed (m/s) → min/km; distance default cm→km
+- Maxima reflect visible range; device metadata displayed
+
 ## Features (v1.0.0)
 - Local .FIT parsing (records, developer fields, device metadata)
 - Core/Skin temps on primary Y-axis; HR/pace/distance/cadence/HSI on secondary
