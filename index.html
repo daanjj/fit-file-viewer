@@ -181,7 +181,7 @@
     </div>
     <div class="row" style="margin-top:6px">
       <label class="chip"><input type="checkbox" id="toggle-trim" checked><span class="swatch" style="background:#4b5563"></span><span class="label">Trim Early Noise</span><span class="state" id="state-trim">On</span></label>
-      <label class="chip"><input type="checkbox" id="toggle-xaxis"><span class="swatch" style="background:#4b5563"></span><span class="label">X-Axis: Time of Day</span><span class="state" id="state-xaxis">Off</span></label>
+      <label class="chip"><input type="checkbox" id="toggle-xaxis"><span class="swatch" style="background:#6366f1"></span><span class="label">Time of Day</span><span class="state" id="state-xaxis">Off</span></label>
     </div>
     <div class="stats" id="stats"></div>
   </div>
@@ -889,7 +889,7 @@
         for (const s of this.series) {
           if (!s || !s.visible || !s.points || s.points.length===0) continue;
           ctx.strokeStyle = s.color;
-          ctx.lineWidth = 1.5;
+          ctx.lineWidth = 3;
           ctx.beginPath();
           let first = true;
           const sy = (s.axis==='left') ? (y)=>this._syLeft(y) : (y)=>this._syRight(y);
@@ -1247,7 +1247,10 @@
         current.manufacturer = (function(){
           const pick = (deviceInfos&&deviceInfos[0]) ? deviceInfos[0] : (fileIds&&fileIds[0]);
           const f = (pick && pick.fields) || {};
-          return (typeof f[2] === 'number') ? f[2] : null;
+          const manuf = (typeof f[2] === 'number') ? f[2] : null;
+          // COROS sometimes reports as 294 instead of 167
+          if (manuf === 294) return 167;
+          return manuf;
         })();
 
         deviceNameEl.textContent = computeDeviceStringFromCreator(deviceInfos, fileIds, fileCreators);
@@ -1298,7 +1301,7 @@
           const c = r.fields[4];
           if (typeof c === 'number' && isFinite(c)) {
             let cadVal = c;
-            if (current.manufacturer === 1) cadVal = c * 2; // Garmin cadence in steps/stride -> spm
+            if (current.manufacturer === 1 || current.manufacturer === 167) cadVal = c * 2; // Garmin & COROS cadence in steps/stride -> spm
             cadRaw.push({x:t, y: cadVal});
           }
 
@@ -1363,44 +1366,65 @@
 
         let coreKey = null, skinKey = null;
 
-        // COROS specific: standard record field 139 appears to be core temp in centi-deg C
-        // If manufacturer is COROS (167), build a coreRaw from field 139 / 100, and search for a skin-like field ~6-10C lower.
+        // COROS specific: look for temperature developer fields with various naming patterns
         if (current.manufacturer === 167) {
-          const core139 = [];
-          for (const r of records) {
-            const v = r.fields[139];
-            if (typeof v === 'number' && isFinite(v)) core139.push({x:r._elapsed, y:v/100});
-          }
-          if (core139.length) {
-            // Try to find another field with similar trajectory ~6-10C lower (median diff in that range), prefer stable/close track
-            function seriesForField(fid){
-              const arr=[]; for (const r of records){ const v=r.fields[fid]; if (typeof v==='number'&&isFinite(v)) arr.push({x:r._elapsed,y:v}); }
-              return arr;
+          let coreDevKey = null, skinDevKey = null;
+          
+          // Search for temperature fields in developer data
+          for (const [k, desc] of devFieldDescriptions.entries()) {
+            const name = (desc.name || '').toLowerCase().trim();
+            
+            // Core temperature patterns: 'core temperature', 'core_temperature', 'XX_core_temperature'
+            if ((name.includes('core') && name.includes('temperature')) || 
+                name.includes('core_temperature') || 
+                /^\d{2}_core_temperature$/.test(name)) {
+              coreDevKey = k;
             }
-            function median(xs){ const a=xs.filter(Number.isFinite).slice().sort((a,b)=>a-b); if (!a.length) return NaN; const m=Math.floor(a.length/2); return a.length%2? a[m] : (a[m-1]+a[m])/2; }
-            function alignAndDiff(a,b,scaleB=1){
-              let i=0,j=0; const diffs=[]; while (i<a.length && j<b.length){ const ax=a[i].x, bx=b[j].x; if (Math.abs(ax-bx)<1e-6){ diffs.push(a[i].y - b[j].y*scaleB); i++; j++; } else if (ax<bx) i++; else j++; }
-              return diffs;
-            }
-            let bestFid=null, bestScore=-Infinity;
-            for (const fid of Object.keys(records[0]?.fields||{})){
-              const id = Number(fid); if (!Number.isFinite(id) || id===139) continue;
-              const rawB = seriesForField(id); if (rawB.length < core139.length*0.5) continue;
-              const diffs = alignAndDiff(core139, rawB, 1/100); // treat candidate as centi-deg by default
-              if (diffs.length < core139.length*0.3) continue;
-              const md = median(diffs);
-              if (!Number.isFinite(md)) continue;
-              // Score: prefer 6-10 C lower than core, small MAD (not implemented), many samples
-              const gap = Math.abs((md) - 8); // target ~8C
-              const score = -gap + diffs.length*1e-4;
-              if (score > bestScore) { bestScore=score; bestFid=id; }
-            }
-            if (bestFid!=null) {
-              const skinSeries=[]; for (const r of records){ const v=r.fields[bestFid]; if (typeof v==='number'&&isFinite(v)) skinSeries.push({x:r._elapsed,y:v/100}); }
-              current.coreRaw = core139;
-              current.skinRaw = skinSeries;
+            
+            // Skin temperature patterns: 'skin temperature', 'skin_temperature', 'XX_skin_temperature'  
+            if ((name.includes('skin') && name.includes('temperature')) || 
+                name.includes('skin_temperature') || 
+                /^\d{2}_skin_temperature$/.test(name)) {
+              skinDevKey = k;
             }
           }
+          
+          const coreRawCoros = [];
+          const skinRawCoros = [];
+          
+          // Extract temperature data if fields found
+          if (coreDevKey) {
+            const desc = devFieldDescriptions.get(coreDevKey) || {};
+            const scale = (Number.isFinite(desc.scale) && desc.scale !== 0) ? desc.scale : 0.01; // default /100
+            const offset = Number.isFinite(desc.offset) ? desc.offset : 0;
+            
+            for (const r of records) {
+              const v = r.dev[coreDevKey];
+              if (typeof v === 'number' && isFinite(v) && v !== 0) {
+                coreRawCoros.push({x: r._elapsed, y: v * scale + offset});
+              }
+            }
+          }
+          
+          if (skinDevKey) {
+            const desc = devFieldDescriptions.get(skinDevKey) || {};
+            const scale = (Number.isFinite(desc.scale) && desc.scale !== 0) ? desc.scale : 0.05; // default /20
+            const offset = Number.isFinite(desc.offset) ? desc.offset : 0;
+            
+            for (const r of records) {
+              const v = r.dev[skinDevKey];
+              if (typeof v === 'number' && isFinite(v) && v !== 0) {
+                skinRawCoros.push({x: r._elapsed, y: v * scale + offset});
+              }
+            }
+          }
+          
+          // Only use COROS temperature data if we found actual temperature fields
+          if (coreRawCoros.length >= 2 || skinRawCoros.length >= 2) {
+            current.coreRaw = coreRawCoros;
+            current.skinRaw = skinRawCoros;
+          }
+          // Note: If no temperature fields found, the app will fall back to generic developer field detection
         }
         function descFor(k){ return devFieldDescriptions.get(k) || {}; }
         function looksLikeCore(d){ return d && d.name && /core/i.test(d.name); }
