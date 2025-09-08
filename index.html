@@ -22,6 +22,7 @@
       --hsi:#ab47bc;
       --dist:#66bb6a;
       --pace:#26c6da;
+      --speed:#ff7043;
       --cad:#ffd54f;
       --select:#4fc3f733;
       --select-border:#4fc3f7aa;
@@ -158,7 +159,7 @@
       <button id="resetBtn" class="btn" disabled>Reset</button>
       <button id="zoomModeBtn" class="btn" disabled>Zoom: Off</button>
       <button id="zoomClearBtn" class="btn" disabled>Clear Zoom</button>
-      <button id="mapBtn" class="btn" disabled>Map Fields</button>
+      <button id="mapBtn" class="btn" disabled style="display:none">Map Fields</button>
     </div>
 
     <div class="legend" id="legend">
@@ -170,6 +171,7 @@
       <label class="chip"><input type="checkbox" id="toggle-hsi"><span class="swatch" style="background:var(--hsi)"></span><span class="label">Heat Strain Index</span><span class="state" id="state-hsi">Off</span></label>
       <label class="chip"><input type="checkbox" id="toggle-dist"><span class="swatch" style="background:var(--dist)"></span><span class="label">Distance <span class="unit">(km)</span></span><span class="state" id="state-dist">Off</span></label>
       <label class="chip"><input type="checkbox" id="toggle-pace"><span class="swatch" style="background:var(--pace)"></span><span class="label">Pace <span class="unit">(min/km)</span></span><span class="state" id="state-pace">Off</span></label>
+      <label class="chip"><input type="checkbox" id="toggle-speed"><span class="swatch" style="background:var(--speed)"></span><span class="label">Speed <span class="unit">(km/h)</span></span><span class="state" id="state-speed">Off</span></label>
       <label class="chip"><input type="checkbox" id="toggle-cad"><span class="swatch" style="background:var(--cad)"></span><span class="label">Cadence <span class="unit">(spm)</span></span><span class="state" id="state-cad">Off</span></label>
     </div>
   </header>
@@ -688,6 +690,9 @@
           xMax = Math.max(xMax, this.elevSeries[this.elevSeries.length-1].x);
         }
         if (!isFinite(xMin) || !isFinite(xMax) || xMin===xMax) { xMin=0; xMax=1; }
+        
+        // Store the actual data range for time calculations
+        this.actualXMin = xMin;
         this.xRange = [xMin, xMax];
 
         let lmin=Infinity, lmax=-Infinity;
@@ -986,9 +991,36 @@
             const d = new Date((this.baseTime + tv + FIT_EPOCH_OFFSET) * 1000);
             labelText = fmtTOD(d);
           } else {
-            labelText = fmtHMS(tv);
+            // For delta time, show elapsed time from the visible start (accounting for trim)
+            const xMin = this.xRange[0];
+            const relativeTime = tv - xMin;
+            labelText = fmtHMS(Math.max(0, relativeTime));
           }
           ctx.fillText(labelText, x, H - this.margins.bottom + 6);
+        }
+        // Draw origin label at the visible start
+        if (this.xAxisMode === 'timeOfDay' && this.baseTime > 0) {
+          const originDate = new Date((this.baseTime + this.xRange[0] + FIT_EPOCH_OFFSET) * 1000);
+          const originLabel = fmtTOD(originDate);
+          ctx.textAlign = 'left';
+          ctx.fillText(originLabel, this.margins.left, H - this.margins.bottom + 6);
+          ctx.textAlign = 'center';
+        } else if (this.xAxisMode !== 'timeOfDay') {
+          // Delta time mode: always show 00:00 at origin
+          ctx.textAlign = 'left';
+          ctx.fillText('00:00', this.margins.left, H - this.margins.bottom + 6);
+          ctx.textAlign = 'center';
+        }
+        // Subtle origin marker at the visible start on the x-axis
+        {
+          const y0 = H - this.margins.bottom;
+          const x0 = this.margins.left;
+          ctx.strokeStyle = getVar('--grid','#2a2f37');
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(x0, y0 - 6);
+          ctx.lineTo(x0, y0);
+          ctx.stroke();
         }
 
         ctx.textAlign = 'right';
@@ -1016,7 +1048,8 @@
           const d = new Date((this.baseTime + x + FIT_EPOCH_OFFSET) * 1000);
           timeText = 't = ' + fmtTOD(d);
         } else {
-          timeText = 't = ' + fmtHMS(clamp(x, xMin, xMax));
+          const relativeTime = x - xMin;
+          timeText = 't = ' + fmtHMS(Math.max(0, relativeTime));
         }
         nearest.push({id:'time', text: timeText});
 
@@ -1072,6 +1105,7 @@
       hsi:  document.getElementById('toggle-hsi'),
       dist: document.getElementById('toggle-dist'),
       pace: document.getElementById('toggle-pace'),
+      speed: document.getElementById('toggle-speed'),
       cad:  document.getElementById('toggle-cad'),
       trim: document.getElementById('toggle-trim'),
       xaxis: document.getElementById('toggle-xaxis'),
@@ -1084,6 +1118,7 @@
       hsi:  document.getElementById('state-hsi'),
       dist: document.getElementById('state-dist'),
       pace: document.getElementById('state-pace'),
+      speed: document.getElementById('state-speed'),
       cad:  document.getElementById('state-cad'),
       trim: document.getElementById('state-trim'),
       xaxis: document.getElementById('state-xaxis'),
@@ -1098,7 +1133,12 @@
 
     for (const el of Object.values(toggles)) {
       if (el.id !== 'toggle-xaxis') {
-        el.addEventListener('change', ()=>{ refreshToggleStates(); renderChart(); updateStatsUI(); });
+        el.addEventListener('change', ()=>{ 
+          refreshToggleStates(); 
+          if (el.id === 'toggle-trim') updateActivityTimeForTrim();
+          renderChart(); 
+          updateStatsUI(); 
+        });
       }
     }
     toggles.xaxis.addEventListener('change', () => {
@@ -1124,6 +1164,7 @@
       hsiRaw:  [],
       distRaw: [],
       paceRaw: [],
+      speedRaw: [],
       cadRaw:  [],
       elevRaw: [],
 
@@ -1133,6 +1174,7 @@
       hsiSeries:  [],
       distSeries: [],
       paceSeries: [],
+      speedSeries: [],
       cadSeries:  [],
       elevSeries: [],
 
@@ -1197,8 +1239,8 @@
       current = {
         records: [], devDesc: new Map(), fileIds: [], deviceInfos: [], fileCreators: [],
         baseTime: 0,
-        hrRaw: [], coreRaw: [], skinRaw: [], hsiRaw: [], distRaw: [], paceRaw: [], cadRaw: [], elevRaw: [],
-        hrSeries: [], coreSeries: [], skinSeries: [], hsiSeries: [], distSeries: [], paceSeries: [], cadSeries: [], elevSeries: [],
+        hrRaw: [], coreRaw: [], skinRaw: [], hsiRaw: [], distRaw: [], paceRaw: [], speedRaw: [], cadRaw: [], elevRaw: [],
+        hrSeries: [], coreSeries: [], skinSeries: [], hsiSeries: [], distSeries: [], paceSeries: [], speedSeries: [], cadSeries: [], elevSeries: [],
         coreKey: null, skinKey: null, coreScale: 1, skinScale: 1, coreOffset: 0, skinOffset: 0,
         tauSec: 0, cutoffX: 0, selection: null, zoomMode: false, xAxisMode: 'delta'
       };
@@ -1282,10 +1324,12 @@
           activityTimeEl.style.display = 'none';
         }
 
+
         // Extract base fields
         const hrRaw = [];
         const distKmRaw = [];
         const paceRaw = [];
+        const speedRaw = [];
         const cadRaw = [];
         const elevRaw = [];
 
@@ -1346,6 +1390,13 @@
           }
           paceRaw.push({x:t, y: isFinite(pace) ? pace : NaN});
 
+          // Speed (km/h) - convert from pace (min/km)
+          let speed = NaN;
+          if (isFinite(pace) && pace > 0) {
+            speed = 60 / pace; // Convert min/km to km/h
+          }
+          speedRaw.push({x:t, y: speed});
+
           // Enhanced altitude (meters, can be negative)
           const enhancedAlt = r.fields[78];
           if (typeof enhancedAlt === 'number' && isFinite(enhancedAlt)) {
@@ -1357,6 +1408,7 @@
         current.hrRaw = hrRaw;
         current.distRaw = distKmRaw;
         current.paceRaw = paceRaw;
+        current.speedRaw = speedRaw;
         current.cadRaw = cadRaw;
 
         // Developer fields: Core/Skin temps
@@ -1615,6 +1667,7 @@
       current.hsiSeries  = smoothZeroPhase(current.hsiRaw,  tau);
       current.distSeries = smoothZeroPhase(current.distRaw, tau);
       current.paceSeries = smoothZeroPhase(current.paceRaw, tau);
+      current.speedSeries = smoothZeroPhase(current.speedRaw, tau);
       current.cadSeries  = smoothZeroPhase(current.cadRaw,  tau);
       current.elevSeries = smoothZeroPhase(current.elevRaw, Math.min(10, tau || 3));
     }
@@ -1653,6 +1706,7 @@
         { id:'hsi',  name:'HSI',        color:getVar('--hsi','#ab47bc'),  axis:'right', visible: toggles.hsi.checked,  points: filterPoints(current.hsiSeries),  fmt:(v)=> Number.isFinite(v)? (Math.round(v*100)/100).toFixed(2):'--' },
         { id:'dist', name:'Distance',   color:getVar('--dist','#66bb6a'), axis:'right', visible: toggles.dist.checked, points: filterPoints(current.distSeries), fmt:(v)=> Number.isFinite(v)? (Math.round(v*100)/100).toFixed(2)+' km':'--' },
         { id:'pace', name:'Pace',       color:getVar('--pace','#26c6da'), axis:'right', visible: toggles.pace.checked, points: filterPoints(current.paceSeries), fmt:(v)=> fmtPace(v) },
+        { id:'speed', name:'Speed',     color:getVar('--speed','#ff7043'), axis:'right', visible: toggles.speed.checked, points: filterPoints(current.speedSeries), fmt:(v)=> Number.isFinite(v)? (Math.round(v*100)/100).toFixed(2)+' km/h':'--' },
         { id:'cad',  name:'Cadence',    color:getVar('--cad','#ffd54f'),  axis:'right', visible: toggles.cad.checked,  points: filterPoints(current.cadSeries),  fmt:(v)=> Number.isFinite(v)? Math.round(v)+' spm':'--' },
       ];
       const elev = filterPoints(current.elevSeries);
@@ -1703,6 +1757,10 @@
         const p = arrayMinInView(current.paceRaw);
         parts.push(`<span>Best Pace: <span class="kbd">${p!=null ? fmtPace(p) : '--'}</span></span>`);
       }
+      if (toggles.speed.checked) {
+        const s = arrayMaxInView(current.speedRaw);
+        parts.push(`<span>Max Speed: <span class="kbd">${s!=null ? (Math.round(s*100)/100).toFixed(2)+' km/h' : '--'}</span></span>`);
+      }
       if (toggles.cad.checked) {
         const c = arrayMaxInView(current.cadRaw);
         parts.push(`<span>Max Cadence: <span class="kbd">${c!=null ? Math.round(c)+' spm' : '--'}</span></span>`);
@@ -1719,6 +1777,26 @@
         end = Math.min(end, current.selection[1]);
       }
       return Math.max(0, end - start);
+    }
+
+    function updateActivityTimeForTrim() {
+      if (current.baseTime > 0 && toggles.trim && toggles.trim.checked && current.cutoffX > 0) {
+        const lastElapsed = current.records.length ? current.records[current.records.length - 1]._elapsed : 0;
+        const originalStartTime = new Date((current.baseTime + FIT_EPOCH_OFFSET) * 1000);
+        const trimmedStartTime = new Date((current.baseTime + current.cutoffX + FIT_EPOCH_OFFSET) * 1000);
+        const endTime = new Date((current.baseTime + lastElapsed + FIT_EPOCH_OFFSET) * 1000);
+        activityTimeEl.textContent = `Activity Date: ${fmtDate(originalStartTime)} | Time: ${fmtTOD(trimmedStartTime)} - ${fmtTOD(endTime)} (trimmed from ${fmtTOD(originalStartTime)})`;
+        activityTimeEl.style.display = 'block';
+      } else if (current.baseTime > 0) {
+        const lastElapsed = current.records.length ? current.records[current.records.length - 1]._elapsed : 0;
+        const startTime = new Date((current.baseTime + FIT_EPOCH_OFFSET) * 1000);
+        const endTime = new Date((current.baseTime + lastElapsed + FIT_EPOCH_OFFSET) * 1000);
+        activityTimeEl.textContent = `Activity Date: ${fmtDate(startTime)} | Time: ${fmtTOD(startTime)} - ${fmtTOD(endTime)}`;
+        activityTimeEl.style.display = 'block';
+      } else {
+        activityTimeEl.textContent = '';
+        activityTimeEl.style.display = 'none';
+      }
     }
 
     const modalBackdrop = document.getElementById('modalBackdrop');
@@ -1799,6 +1877,7 @@
 
       recalcSmoothing();
       updateCutoff();
+      updateActivityTimeForTrim();
       renderChart();
       updateStatsUI();
 
@@ -1933,6 +2012,11 @@
 
     setSmoothingUI(sliderToTau(smoothSlider.value));
     chart.setZoomMode(false);
+
+    // Show Map Fields button only for local development (localhost or file://)
+    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:') {
+      mapBtn.style.display = 'inline-block';
+    }
   </script>
 </body>
 </html>
