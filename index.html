@@ -1177,7 +1177,7 @@
         div.style.fontSize = '12px';
         div.style.color = '#111827';
         // Map gradient selector
-        const selectHTML = '<div style="margin-top:6px"><label style="display:block;margin-bottom:4px;color:#111827">Route color:</label><select id="mapGradientSelect" style="padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px"><option value="hr" selected>Heart Rate</option><option value="pace">Pace (fixed bands)</option><option value="none">None</option></select><div style="margin-top:6px;line-height:1.3"><div><strong>HR</strong>: blue → cyan → green → yellow → red</div><div><strong>Pace</strong>: ≤4:00 blue; 4:00–4:30 cyan; 4:30–5:00 green; 5:00–6:00 yellow; >6:00 red</div></div></div>';
+        const selectHTML = '<div style="margin-top:6px"><label style="display:block;margin-bottom:4px;color:#111827">Route color:</label><select id="mapGradientSelect" style="padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px"><option value="none" selected>None</option><option value="hr">Heart Rate</option><option value="pace">Pace (fixed bands)</option></select><div style="margin-top:6px;line-height:1.3"><div><strong>HR</strong>: blue → cyan → green → yellow → red</div><div><strong>Pace</strong>: ≤4:00 blue; 4:00–4:30 cyan; 4:30–5:00 green; 5:00–6:00 yellow; >6:00 red</div></div></div>';
         div.innerHTML = `
           <div><span style="display:inline-block;width:10px;height:10px;background:#2563eb;margin-right:6px;border-radius:2px;"></span>Route</div>
           <div><span style="display:inline-block;width:10px;height:10px;background:#f59e0b;margin-right:6px;border-radius:2px;"></span>Selection</div>
@@ -1256,7 +1256,7 @@
           const status = document.getElementById('mapStatus');
           // Determine gradient mode
           const selEl = document.getElementById('mapGradientSelect');
-          const mode = selEl ? selEl.value : 'hr';
+          const mode = selEl ? selEl.value : 'none';
           // Start with full filtered arrays
           let useFiltered = filtered.slice();
           let useIdxs = idxs.slice();
@@ -1900,13 +1900,8 @@
         }
         current.elevRaw = elevRaw;
 
-        // Update route map if we have points
-        // Build gradient values (default HR)
-        let gradientValues = null;
-        try {
-          gradientValues = buildGradientValues('hr');
-        } catch (e) {}
-        try { updateRouteOnMap(route, gradientValues); } catch (e) { /* ignore */ }
+        // Update route map if we have points (no gradient by default)
+        try { updateRouteOnMap(route); } catch (e) { /* ignore */ }
 
         const tau = sliderToTau(smoothSlider.value);
         setSmoothingUI(tau);
