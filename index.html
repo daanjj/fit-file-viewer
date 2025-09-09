@@ -5,6 +5,10 @@
   <title>FIT Viewer: HR, Core Temp, Skin Temp (BETA v0.3)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <style>
+    /* Leaflet map styles */
+    .leaflet-container{background:#ffffff}
+    #map{display:block;width:100%;height:40vh;border-radius:10px;overflow:hidden}
+
     :root{
       --bg:#0f1216;
       --panel:#171b21;
@@ -145,6 +149,7 @@
       border:1px solid var(--select-border);
     }
   </style>
+ <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 </head>
 <body>
   <header>
@@ -194,6 +199,12 @@
       <div id="message" class="msg">Load a .FIT file. Zoom mode is OFF by default so you can slide across the graph to see values. Turn Zoom mode ON to drag-select a time range. All parsing and rendering happens locally.</div>
     </div>
   </div>
+
+ <div class="wrap">
+   <div class="card">
+     <div id="map"></div>
+   </div>
+ </div>
 
   <div class="footer" id="footerText">
     Privacy: Your file never leaves your device.
@@ -637,6 +648,12 @@
             this.tooltip.active = true;
             this.tooltip.x = x;
             this._updateTooltipNearest();
+            try {
+              const [xMin,xMax] = this.xRange;
+              const plotW = this._plotWidth();
+              const dataX = xMin + ( (x - this.margins.left) / plotW ) * (xMax - xMin);
+              updateMovingPositionOnMap(dataX);
+            } catch (e) {}
             this.draw();
           }
         }, {passive:false});
@@ -1103,6 +1120,110 @@
     const canvas = document.getElementById('chart');
     const chart = new LineChart(canvas);
 
+    // Leaflet map init (lazy, only when coordinates are present)
+    let map, routeLayer, selectionLayer, movingMarker, startMarker, endMarker, legendControl;
+    function ensureMap(){
+      if (map) return map;
+      const el = document.getElementById('map');
+      if (!el) return null;
+      map = L.map('map', { zoomControl: true, attributionControl: true });
+      // Click on map to sync graph position
+      map.on('click', (e)=>{
+        try {
+          if (!current.routePoints || !current.routePoints.length) return;
+          // Find nearest route point to clicked latlng
+          const {lat, lng} = e.latlng;
+          let best=null;
+          for (const p of current.routePoints){
+            const dx = p.lat - lat;
+            const dy = p.lon - lng;
+            const d2 = dx*dx + dy*dy;
+            if (!best || d2 < best.d2) best = {p, d2};
+          }
+          if (!best) return;
+          // Move crosshair/tooltip to that time on the chart by approximating x to pixel
+          const [xMin,xMax] = chart.xRange;
+          const W = chart.canvas.clientWidth || (chart.canvas.width/chart.dpr);
+          const plotW = Math.max(1, (W - chart.margins.left - chart.margins.right));
+          const rel = (best.p.x - xMin) / Math.max(1e-9, (xMax - xMin));
+          const xp = chart.margins.left + rel * plotW;
+          chart.tooltip.active = true;
+          chart.tooltip.x = xp;
+          chart._updateTooltipNearest();
+          updateMovingPositionOnMap(best.p.x);
+          chart.draw();
+        } catch (err) { console.warn(err); }
+      });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+      routeLayer = L.polyline([], { color: '#2563eb', weight: 3, opacity: 0.9 }).addTo(map);
+      selectionLayer = L.polyline([], { color: '#f59e0b', weight: 6, opacity: 0.9 }).addTo(map);
+      // Legend
+      legendControl = L.control({position:'bottomright'});
+      legendControl.onAdd = function(){
+        const div = L.DomUtil.create('div','leaflet-control legend');
+        div.style.background = 'rgba(255,255,255,0.9)';
+        div.style.padding = '6px 8px';
+        div.style.borderRadius = '6px';
+        div.style.fontSize = '12px';
+        div.innerHTML = `
+          <div><span style="display:inline-block;width:10px;height:10px;background:#2563eb;margin-right:6px;border-radius:2px;"></span>Route</div>
+          <div><span style="display:inline-block;width:10px;height:10px;background:#f59e0b;margin-right:6px;border-radius:2px;"></span>Selection</div>
+          <div><span style="display:inline-block;width:10px;height:10px;background:#dc2626;border:2px solid #dc2626;border-radius:50%;margin-right:6px;"></span>Position</div>
+          <div><span style="display:inline-block;width:10px;height:10px;background:#16a34a;margin-right:6px;border-radius:50%;"></span>Start</div>
+          <div><span style="display:inline-block;width:10px;height:10px;background:#ef4444;margin-right:6px;border-radius:50%;"></span>Finish</div>
+        `;
+        return div;
+      };
+      legendControl.addTo(map);
+      return map;
+    }
+    function updateRouteOnMap(latlngs){
+      if (!latlngs || latlngs.length < 2) return;
+      const m = ensureMap(); if (!m) return;
+      routeLayer.setLatLngs(latlngs);
+      // Start/finish markers
+      try {
+        if (startMarker) { map.removeLayer(startMarker); startMarker=null; }
+        if (endMarker) { map.removeLayer(endMarker); endMarker=null; }
+        const first = latlngs[0];
+        const last = latlngs[latlngs.length-1];
+        startMarker = L.circleMarker(first, { radius:6, color:'#16a34a', weight:2, fill:true, fillColor:'#16a34a', fillOpacity:0.9 }).addTo(m);
+        endMarker = L.circleMarker(last, { radius:6, color:'#ef4444', weight:2, fill:true, fillColor:'#ef4444', fillOpacity:0.9 }).addTo(m);
+      } catch (e) {}
+      // Do not auto-fit on route update if a selection is active (we will fit to selection)
+      if (!current.selection || !current.selection.length) {
+        m.fitBounds(routeLayer.getBounds(), { padding: [20,20] });
+      }
+    }
+    function updateSelectedSegmentOnMap(range){
+      const m = ensureMap(); if (!m) return;
+      if (!range || !Array.isArray(range) || range.length!==2 || !current.routePoints || !current.routePoints.length){
+        selectionLayer.setLatLngs([]);
+        return;
+      }
+      const [x1, x2] = range;
+      const seg = [];
+      for (const p of current.routePoints){ if (p.x>=x1 && p.x<=x2) seg.push([p.lat, p.lon]); }
+      selectionLayer.setLatLngs(seg);
+      if (seg.length>1) m.fitBounds(selectionLayer.getBounds(), { padding: [20,20] });
+    }
+    function updateMovingPositionOnMap(x){
+      const m = ensureMap(); if (!m) return;
+      if (!current.routePoints || !current.routePoints.length) return;
+      // find nearest by x
+      let best=null; for (const p of current.routePoints){ const dx = Math.abs(p.x - x); if (!best || dx < best.dx) best = {p, dx}; }
+      if (!best) return;
+      const latlng = [best.p.lat, best.p.lon];
+      if (!movingMarker){
+        movingMarker = L.circleMarker(latlng, { radius:5, color:'#dc2626', weight:2, fill:true, fillColor:'#dc2626', fillOpacity:0.9 }).addTo(m);
+      } else {
+        movingMarker.setLatLng(latlng);
+      }
+    }
+
     const toggles = {
       hr:   document.getElementById('toggle-hr'),
       core: document.getElementById('toggle-core'),
@@ -1226,6 +1347,13 @@
     zoomClearBtn.addEventListener('click', ()=>{
       current.selection = null;
       zoomClearBtn.disabled = true;
+      try { updateSelectedSegmentOnMap(null); } catch (e) {}
+      try {
+        if (current.routePoints && current.routePoints.length>1) {
+          const latlngs = current.routePoints.map(p=>[p.lat, p.lon]);
+          updateRouteOnMap(latlngs);
+        }
+      } catch (e) {}
       renderChart();
       updateStatsUI();
     });
@@ -1265,6 +1393,7 @@
       const x2 = Math.max(x1, range[1]);
       current.selection = [x1, x2];
       zoomClearBtn.disabled = false;
+      try { updateSelectedSegmentOnMap(current.selection); } catch (e) {}
       renderChart();
       updateStatsUI();
     };
@@ -1341,8 +1470,20 @@
         let prevDcm = null;
         let prevT = null;
 
+        const route = [];
         for (const r of records) {
           const t = r._elapsed;
+          // For mapping: store time->latlon rows
+          const lat = r.fields[0];
+          const lon = r.fields[1];
+          const toDeg = (semi)=> (typeof semi==='number' && isFinite(semi)) ? (semi * 180 / Math.pow(2,31)) : NaN;
+          const latDeg = toDeg(lat), lonDeg = toDeg(lon);
+          if (isFinite(latDeg) && isFinite(lonDeg) && Math.abs(latDeg)<=90 && Math.abs(lonDeg)<=180) {
+            current.routePoints = current.routePoints || [];
+            current.routePoints.push({x:t, lat:latDeg, lon:lonDeg});
+            route.push([latDeg, lonDeg]);
+          }
+
 
           const hr = r.fields[3];
           if (typeof hr === 'number' && hr>0 && hr<255) hrRaw.push({x:t, y:hr});
@@ -1407,6 +1548,10 @@
           if (typeof enhancedAlt === 'number' && isFinite(enhancedAlt)) {
             elevRaw.push({x:t, y: enhancedAlt});
           }
+
+          // Route (lat/lon in semicircles -> degrees)
+          // (handled above while building current.routePoints and route)
+
 
           if (typeof dRaw === 'number' && isFinite(dRaw)) { prevDcm = dRaw; prevT = t; }
         }
@@ -1585,6 +1730,9 @@
           }
         }
         current.elevRaw = elevRaw;
+
+        // Update route map if we have points
+        try { updateRouteOnMap(route); } catch (e) { /* ignore */ }
 
         const tau = sliderToTau(smoothSlider.value);
         setSmoothingUI(tau);
@@ -2028,5 +2176,6 @@
       }
     }
   </script>
+ <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </body>
 </html>
