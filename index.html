@@ -195,8 +195,8 @@
     </div>
   </div>
 
-  <div class="footer">
-    Privacy: Your file never leaves your device. If temperatures don’t appear automatically, use “Map Fields” to assign developer data fields to Core/Skin and optionally apply a scale (e.g., 0.01).
+  <div class="footer" id="footerText">
+    Privacy: Your file never leaves your device.
   </div>
 
   <div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="mapTitle">
@@ -986,6 +986,11 @@
         ctx.textBaseline = 'top';
         for (const tv of xTicks) {
           const x = this._sx(tv);
+          const isOriginTick = Math.abs(tv - this.xRange[0]) < 1e-9;
+          const willDrawCustomOrigin = (this.xAxisMode === 'timeOfDay' && this.baseTime > 0) || (this.xAxisMode !== 'timeOfDay');
+          // Skip drawing the tick label at the origin if we will draw a custom origin label below
+          if (willDrawCustomOrigin && isOriginTick) continue;
+
           let labelText;
           if (this.xAxisMode === 'timeOfDay' && this.baseTime > 0) {
             const d = new Date((this.baseTime + tv + FIT_EPOCH_OFFSET) * 1000);
@@ -1012,7 +1017,7 @@
           ctx.textAlign = 'center';
         }
         // Subtle origin marker at the visible start on the x-axis
-        {
+        if (isFinite(this.xRange[0]) && isFinite(this.xRange[1]) && this.xRange[1] > this.xRange[0]) {
           const y0 = H - this.margins.bottom;
           const x0 = this.margins.left;
           ctx.strokeStyle = getVar('--grid','#2a2f37');
@@ -2016,6 +2021,11 @@
     // Show Map Fields button only for local development (localhost or file://)
     if (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:') {
       mapBtn.style.display = 'inline-block';
+      // Append Map Fields guidance when available
+      const footer = document.getElementById('footerText');
+      if (footer) {
+        footer.innerHTML += ' If temperatures don’t appear automatically, use “Map Fields” to assign developer data fields to Core/Skin and optionally apply a scale (e.g., 0.01).';
+      }
     }
   </script>
 </body>
