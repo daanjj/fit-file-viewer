@@ -11,7 +11,7 @@
     gtag('config', 'G-GR1R0S0C8M');
   </script>
   <meta charset="utf-8" />
-  <title>FIT Viewer -- view core/skin temperatures and other stats (BETA v0.42 for ThermoClinics usage)</title>
+  <title>FIT Viewer -- view core/skin temperatures and other stats (BETA v0.43 for ThermoClinics usage)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <style>
     /* Leaflet map styles */
@@ -163,7 +163,7 @@
 </head>
 <body>
   <header>
-    <div class="title">FIT Viewer -- view core/skin temperatures and other stats (BETA v0.42 for ThermoClinics usage)</div>
+    <div class="title">FIT Viewer -- view core/skin temperatures and other stats (BETA v0.43 for ThermoClinics usage)</div>
 
     <div class="section-heading" aria-hidden="true">Metadata</div>
     <div id="deviceName" class="device-line" aria-label="Device metadata line"></div>
@@ -1174,7 +1174,7 @@
           }).addTo(map);
           
           // Base layers
-          routeLayer = L.polyline([], { color: '#2563eb', weight: 3, opacity: 0.5 }).addTo(map);
+          routeLayer = L.polyline([], { color: '#2563eb', weight: 6, opacity: 0.5 }).addTo(map);
           routeGradientGroup = L.layerGroup().addTo(map);
           selectionLayer = L.polyline([], { color: '#f59e0b', weight: 6, opacity: 0.9 }).addTo(map);
           
@@ -1201,8 +1201,8 @@
   <div><span style="display:inline-block;width:10px;height:10px;background:#2563eb;margin-right:6px;border-radius:2px;"></span>Route</div>
   <div><span style="display:inline-block;width:10px;height:10px;background:#f59e0b;margin-right:6px;border-radius:2px;"></span>Selection</div>
   <div><span style="display:inline-block;width:10px;height:10px;background:#7c3aed;border:2px solid #7c3aed;border-radius:50%;margin-right:6px;"></span>Position</div>
-  <div><span style="display:inline-block;width:10px;height:10px;background:#16a34a;margin-right:6px;border-radius:50%;"></span>Start</div>
-  <div><span style="display:inline-block;width:10px;height:10px;background:#ef4444;margin-right:6px;border-radius:50%;"></span>Finish</div>
+  <div><span style="display:inline-block;width:10px;height:10px;background:#ffffff;border:2px solid #16a34a;margin-right:6px;border-radius:50%;"></span>Start</div>
+  <div><span style="display:inline-block;width:10px;height:10px;background:#ffffff;border:2px solid #ef4444;margin-right:6px;border-radius:50%;"></span>Finish</div>
 </div>
 `;
             
@@ -1392,13 +1392,15 @@
       if (kind === 'hr'){
         for (const p of current.routePoints){ let nearest=null; for (const pt of current.hrRaw||[]){ const dx=Math.abs(pt.x - p.x); if (!nearest || dx<nearest.dx) nearest={v:pt.y, dx}; } values.push(nearest? nearest.v : NaN); }
       } else if (kind === 'pace'){
-        // Pace fixed-band coloring using minutes per km
+        // Pace fixed-band coloring using minutes per km with outlier clamping
+        // Clamp pace to [3.0, 12.0] min/km so brief stops don’t dominate color scaling
         // Bands: ≤4:00 (<=4.0) blue; 4.0–4.5 cyan; 4.5–5.0 green; 5.0–6.0 yellow; >6.0 red
         for (const p of current.routePoints){
           let nearest=null; for (const pt of current.paceRaw||[]){ const dx=Math.abs(pt.x - p.x); if (!nearest || dx<nearest.dx) nearest={v:pt.y, dx}; }
-          const v = nearest? nearest.v : NaN; // min/km
-          // Map band to nominal value to drive color scale if needed
+          let v = nearest? nearest.v : NaN; // min/km
           if (!Number.isFinite(v)) { values.push(NaN); continue; }
+          v = clamp(v, 3.0, 12.0);
+          // Map band to nominal value to drive color scale if needed
           if (v <= 4.0) values.push(4.0);
           else if (v <= 4.5) values.push(4.5);
           else if (v <= 5.0) values.push(5.0);
@@ -1428,8 +1430,8 @@
       try { if (endMarker) m.removeLayer(endMarker); } catch(e){}
       const first = points[0];
       const last = points[points.length-1];
-      startMarker = L.circleMarker(first, { radius:7, color:'#16a34a', weight:2, fill:true, fillColor:'#16a34a', fillOpacity:1, opacity:1 }).addTo(m).bindTooltip('Start', {permanent:false, direction:'top'});
-      endMarker = L.circleMarker(last, { radius:7, color:'#111827', weight:2, fill:true, fillColor:'#111827', fillOpacity:1, opacity:1 }).addTo(m).bindTooltip('Finish', {permanent:false, direction:'top'});
+      startMarker = L.circleMarker(first, { radius:7, color:'#16a34a', weight:3, fill:true, fillColor:'#ffffff', fillOpacity:1, opacity:1 }).addTo(m).bindTooltip('Start', {permanent:false, direction:'top'});
+      endMarker = L.circleMarker(last, { radius:7, color:'#ef4444', weight:3, fill:true, fillColor:'#ffffff', fillOpacity:1, opacity:1 }).addTo(m).bindTooltip('Finish', {permanent:false, direction:'top'});
       try { if (startMarker.bringToFront) startMarker.bringToFront(); if (endMarker.bringToFront) endMarker.bringToFront(); } catch(e){}
     }
     function updateMovingPositionOnMap(x){
