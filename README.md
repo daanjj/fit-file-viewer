@@ -37,3 +37,12 @@ Mobile-first, client-side FIT file viewer for heart rate, core/skin temperature,
    ```bash
    python3 -m http.server 8000
    # open http://localhost:8000
+   ```
+
+3. Conventional commits + release automation
+   - See CONVENTIONAL_COMMITS.md for a quick cheat sheet
+   - Optional: set the commit template locally so your commit editor is pre-filled:
+     ```bash
+     git config commit.template .github/COMMIT_TEMPLATE.txt
+     ```
+   - On push to main, the "release" GitHub Action bumps the version, prepends to CHANGELOG.md, updates VERSION and index.html version strings, tags, and pushes.

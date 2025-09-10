@@ -1,0 +1,136 @@
+name: release
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch tags
+        run: git fetch --tags --force
+
+      - name: Get last tag
+        id: last
+        shell: bash
+        run: |
+          last=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "tag=$last" >> "$GITHUB_OUTPUT"
+
+      - name: Decide bump (major/minor/patch) from commit messages
+        id: bump
+        shell: bash
+        run: |
+          range="${{ steps.last.outputs.tag }}..HEAD"
+          bump="patch"
+          # Major bump if any commit mentions BREAKING CHANGE in body
+          if git log --format=%B $range | grep -q "BREAKING CHANGE"; then bump=major; fi
+          # Major bump if any subject uses the bang (!) syntax: type(scope)!:
+          if [ "$bump" != "major" ] && git log --format=%s $range | grep -Eq "^[a-z]+(\([^)]+\))?!: "; then bump=major; fi
+          # Minor bump if any feat commits (only if not already major)
+          if [ "$bump" != "major" ] && git log --format=%B $range | grep -Eiq "^feat(\(.*\))?: "; then bump=minor; fi
+          # Patch bump if any fix commits (keeps patch if already major/minor)
+          if [ "$bump" = "patch" ] && git log --format=%B $range | grep -Eiq "^fix(\(.*\))?: "; then bump=patch; fi
+          echo "level=$bump" >> "$GITHUB_OUTPUT"
+
+      - name: Compute next version
+        id: next
+        shell: bash
+        run: |
+          ver="${{ steps.last.outputs.tag }}"
+          ver="${ver#v}"
+          IFS=. read -r major minor patch <<< "$ver"
+          case "${{ steps.bump.outputs.level }}" in
+            major) major=$((major+1)); minor=0; patch=0;;
+            minor) minor=$((minor+1)); patch=0;;
+            *)     patch=$((patch+1));;
+          esac
+          echo "version=$major.$minor.$patch" >> "$GITHUB_OUTPUT"
+          echo "tag=v$major.$minor.$patch" >> "$GITHUB_OUTPUT"
+
+      - name: Generate CHANGELOG
+        shell: bash
+        run: |
+          range="${{ steps.last.outputs.tag }}..HEAD"
+          ver="${{ steps.next.outputs.version }}"
+          date=$(date +%F)
+
+          feats=$(git log --format='%s' $range | grep -E "^feat(\(.*\))?: " || true)
+          fixes=$(git log --format='%s' $range | grep -E "^fix(\(.*\))?: " || true)
+          perf=$(git log --format='%s' $range | grep -E "^perf(\(.*\))?: " || true)
+          refac=$(git log --format='%s' $range | grep -E "^refactor(\(.*\))?: " || true)
+          docs=$(git log --format='%s' $range | grep -E "^docs(\(.*\))?: " || true)
+          others=$(git log --format='%h %s' $range | grep -Ev "^(feat|fix|perf|refactor|docs)(\(.*\))?: " || true)
+
+          tmp=tmp_rovodev_changelog.md
+          {
+            echo "## [$ver] - $date"
+            if [ -n "$feats" ]; then
+              echo ""
+              echo "### Added"
+              echo "$feats" | sed -E 's/^feat(\(.*\))?: /- /'
+            fi
+            if [ -n "$fixes" ]; then
+              echo ""
+              echo "### Fixed"
+              echo "$fixes" | sed -E 's/^fix(\(.*\))?: /- /'
+            fi
+            if [ -n "$perf" ]; then
+              echo ""
+              echo "### Performance"
+              echo "$perf" | sed -E 's/^perf(\(.*\))?: /- /'
+            fi
+            if [ -n "$refac" ]; then
+              echo ""
+              echo "### Refactoring"
+              echo "$refac" | sed -E 's/^refactor(\(.*\))?: /- /'
+            fi
+            if [ -n "$docs" ]; then
+              echo ""
+              echo "### Docs"
+              echo "$docs" | sed -E 's/^docs(\(.*\))?: /- /'
+            fi
+            if [ -n "$others" ]; then
+              echo ""
+              echo "### Other"
+              echo "$others" | sed -E 's/^/- /'
+            fi
+            echo ""
+          } > "$tmp"
+
+          if [ -f CHANGELOG.md ]; then
+            cat "$tmp" CHANGELOG.md > tmp_rovodev_changelog_merged.md
+            mv tmp_rovodev_changelog_merged.md CHANGELOG.md
+          else
+            mv "$tmp" CHANGELOG.md
+          fi
+
+      - name: Update VERSION and files
+        shell: bash
+        run: |
+          echo "${{ steps.next.outputs.version }}" > VERSION
+          # Optional: update version string inside index.html (best-effort)
+          if [ -f index.html ]; then
+            sed -i "s/BETA v[0-9][0-9.\-]*/BETA v${{ steps.next.outputs.version }}/g" index.html || true
+          fi
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore(release): v${{ steps.next.outputs.version }} [skip ci]" || echo "No changes to commit"
+
+      - name: Tag and push
+        shell: bash
+        run: |
+          git tag -a "${{ steps.next.outputs.tag }}" -m "Release ${{ steps.next.outputs.tag }}" || echo "Tag exists"
+          git push origin HEAD
+          git push origin "${{ steps.next.outputs.tag }}"

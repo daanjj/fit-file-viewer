@@ -1,0 +1,24 @@
+# Conventional Commits template
+#
+# Summary (first line) follows:
+# type(optional-scope)!: short, imperative description
+# e.g. feat(map): add HR/pace gradient selector
+#
+# If breaking, either add ! after type/scope, or add a footer:
+# BREAKING CHANGE: describe the breaking change and migration notes
+#
+# Examples:
+# feat(map): add HR/pace gradient selector
+# fix(chart): correct tooltip formatting for pace
+# perf(route): reduce polyline joins for faster rendering
+# refactor(parser): extract altitude detection helper
+# docs(readme): document GitHub Pages setup
+# chore(release): prepare v1.2.0
+# feat(pace)!: change default pace unit to min/mi
+#
+# Body (why/how):
+
+
+# Footer(s):
+# BREAKING CHANGE: <describe>
+# Closes #123
