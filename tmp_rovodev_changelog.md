@@ -1,8 +1,5 @@
-## [0.0.4] - 2025-09-10
-
-### Fixed
-- initialize version baseline
+## [0.0.5] - 2025-09-10
 
 ### Other
-- 95b88fc fix(release): initialize version baseline
+- a3ef036 chore: release numbering
 
