@@ -11,7 +11,7 @@
     gtag('config', 'G-GR1R0S0C8M');
   </script>
   <meta charset="utf-8" />
-  <title>FIT Viewer -- view core/skin temperatures and other stats (BETA v0.0.5 for ThermoClinics)</title>
+  <title>FIT Viewer -- view core/skin temperatures and other stats (BETA v0.4.5 for ThermoClinics)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <style>
     /* Leaflet map styles */
@@ -163,7 +163,7 @@
 </head>
 <body>
   <header>
-    <div class="title">FIT Viewer -- view core/skin temperatures and other stats (BETA v0.0.5 for ThermoClinics usage)</div>
+    <div class="title">FIT Viewer -- view core/skin temperatures and other stats (BETA v0.4.5 for ThermoClinics usage)</div>
 
     <div class="section-heading" aria-hidden="true">Metadata</div>
     <div id="deviceName" class="device-line" aria-label="Device metadata line"></div>
@@ -1784,10 +1784,22 @@
           }
           speedRaw.push({x:t, y: speed});
 
-          // Enhanced altitude (meters, can be negative)
-          const enhancedAlt = r.fields[78];
-          if (typeof enhancedAlt === 'number' && isFinite(enhancedAlt)) {
-            elevRaw.push({x:t, y: enhancedAlt});
+          // Elevation (meters, can be negative) from enhanced_altitude (78) or altitude (2)
+          // FIT spec: scale=5, offset=500 => meters = raw/5 - 500
+          const rawEnhAlt = r.fields[78];
+          const rawAlt = r.fields[2];
+          const decodeAlt = (v)=>{
+            if (typeof v !== 'number' || !isFinite(v)) return NaN;
+            const m = v/5 - 500;
+            // discard obviously invalid values
+            if (!isFinite(m) || m < -1000 || m > 9000) return NaN;
+            return m;
+          };
+          let elevVal = NaN;
+          if (rawEnhAlt !== undefined) elevVal = decodeAlt(rawEnhAlt);
+          if (!Number.isFinite(elevVal) && rawAlt !== undefined) elevVal = decodeAlt(rawAlt);
+          if (Number.isFinite(elevVal)) {
+            elevRaw.push({x:t, y: elevVal});
           }
 
           // Route (lat/lon in semicircles -> degrees)
