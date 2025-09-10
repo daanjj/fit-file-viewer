@@ -5,6 +5,7 @@ Mobile-first, client-side FIT file viewer for heart rate, core/skin temperature,
 - Spec: see docs/spec.md (Version 1.0.0)
 - Demo/Hosting: single static HTML (index.html). Host on GitHub Pages or serve locally.
 - Privacy: 100% in-browser; your .fit files never leave your device.
+- Versioning: Automatic version bump via GitHub Actions and tags (see CONVENTIONAL_COMMITS.md)
 
 ## Features (v1.1.0)
 - Local .FIT parsing; developer field mapping (core/skin)
