@@ -170,7 +170,7 @@
     <div id="activityTime" class="device-line" aria-label="Activity date and time range"></div>
 
     <div class="row">
-      <input id="file" type="file" accept=".fit" />
+      <input id="file" type="file" accept=".fit,.FIT,application/vnd.ant.fit,application/fit,application/octet-stream,*/*" />
       <button id="resetBtn" class="btn" disabled>Reset</button>
       <button id="zoomModeBtn" class="btn" disabled>Zoom: Off</button>
       <button id="zoomClearBtn" class="btn" disabled>Clear Zoom</button>
@@ -1314,7 +1314,7 @@
             if (status) status.textContent = 'Route color: None';
             return;
           }
-          // (rest of the function stays the same)const buildGradient = ()=>{
+          // (rest of the function stays the same) const buildGradient = ()=>{
 
           let useFiltered = filtered.slice();
           let useIdxs = idxs.slice();
@@ -1380,7 +1380,7 @@
             }
           } catch (e) { if (status) status.textContent = 'Error building gradient'; }
         };
-        try { requestAnimationFrame(()=>{ buildGradient(); addStartFinishMarkers(useFiltered); }); } catch(e) { buildGradient(); addStartFinishMarkers(useFiltered); }
+        try { requestAnimationFrame(()=>{ buildGradient(); addStartFinishMarkers(filtered); }); } catch(e) { buildGradient(); addStartFinishMarkers(filtered); }
       } catch (err) {
         if (status) status.textContent = 'updateRouteOnMap error';
         console.error(err);
@@ -1627,6 +1627,18 @@
     fileInput.addEventListener('change', async (e)=>{
       const file = e.target.files && e.target.files[0];
       if (!file) return;
+      
+      // Enforce .FIT selection (Android may route via */* and give empty/unknown MIME types)
+      const isExtFIT = /\.fit$/i.test((file.name || '').trim());
+      const isMimeFIT = /^(application\/(vnd\.ant\.fit|fit|octet-stream))$/i.test((file.type || '').trim());
+      
+      // If neither extension nor MIME looks like FIT, reject it
+      if (!isExtFIT && !isMimeFIT) {
+        messageEl.innerHTML = '<span class="error">Please select a .FIT file.</span>';
+        e.target.value = ''; // clear so user can re-pick
+        return;
+      }
+      
       resetBtn.disabled = false;
       zoomModeBtn.disabled = false;
       messageEl.textContent = 'Parsing...';
