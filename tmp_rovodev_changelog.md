@@ -1,8 +1,8 @@
-## [0.0.3] - 2025-09-10
+## [0.0.4] - 2025-09-10
 
 ### Fixed
 - initialize version baseline
 
 ### Other
-- 23ab987 fix(release): initialize version baseline
+- 95b88fc fix(release): initialize version baseline
 
