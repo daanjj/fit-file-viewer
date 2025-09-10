@@ -1,5 +1,8 @@
-## [0.0.2] - 2025-09-10
+## [0.0.3] - 2025-09-10
+
+### Fixed
+- initialize version baseline
 
 ### Other
-- c9961bb Update VERSION
+- 23ab987 fix(release): initialize version baseline
 
