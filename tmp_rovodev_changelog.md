@@ -1,5 +1,5 @@
-## [0.5.1] - 2025-09-11
+## [0.5.2] - 2025-09-11
 
 ### Other
-- 6fcb129 chore(workflows)
+- 7d0177b Tweaks and updated documents
 
