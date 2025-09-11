@@ -41,9 +41,10 @@
       --select-border:#4fc3f7aa;
 
       /* HSI zones on white canvas */
-      --hsi-bg-green:#2e7d321a;
-      --hsi-bg-orange:#ef6c001a;
-      --hsi-bg-red:#e539351a;
+      --hsi-bg-green:#2e7d322a;
+      --hsi-bg-orange:#e09f0f2a;
+      --hsi-bg-red-med:#e539352a;
+      --hsi-bg-red-dark:#b91c1c2a;
 
       /* Elevation background */
       --elev-stroke:#6b728066;
@@ -834,17 +835,19 @@
         const plotBottom = H - this.margins.bottom;
 
         const zoneOf = (v)=> {
-          const c = clamp(v, 0, 5);
+          const c = Number.isFinite(v) ? v : NaN;
           if (!Number.isFinite(c)) return null;
-          if (c <= 0.1) return null; // keep background white when HSI <= 0.1
-          if (c < 1) return 'green';
-          if (c < 2) return 'orange';
-          return 'red';
+          if (c < 0.1) return null; // keep background white when HSI < 0.1
+          if (c <= 1) return 'green';
+          if (c <= 3) return 'orange';
+          if (c <= 7) return 'red-med';
+          return 'red-dark';
         };
         const colorOf = (zone)=>{
           if (zone==='green') return getVar('--hsi-bg-green', '#2e7d321a');
           if (zone==='orange') return getVar('--hsi-bg-orange', '#ef6c001a');
-          if (zone==='red') return getVar('--hsi-bg-red', '#e539351a');
+          if (zone==='red-med') return getVar('--hsi-bg-red-med', '#e539351a');
+          if (zone==='red-dark') return getVar('--hsi-bg-red-dark', '#b91c1c1a');
           return null;
         };
 
@@ -2075,7 +2078,7 @@
       current.paceSeries = smoothZeroPhase(current.paceRaw, tau);
       current.speedSeries = smoothZeroPhase(current.speedRaw, tau);
       current.cadSeries  = smoothZeroPhase(current.cadRaw,  tau);
-      current.elevSeries = smoothZeroPhase(current.elevRaw, Math.min(10, tau || 3));
+      current.elevSeries = smoothZeroPhase(current.elevRaw, tau);
     }
 
     function updateCutoff(){

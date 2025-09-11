@@ -1,21 +1,21 @@
 # FIT Viewer
 
-[![Deploy to GitHub Pages](https://img.shields.io/badge/Pages-Live-blue?logo=github)](https://<your-username>.github.io/<your-repo>/)
+[![Deploy to GitHub Pages](https://img.shields.io/badge/Pages-Live-blue?logo=github)](https://daanjj.github.io/fit-file-viewer/)
 
 Mobile-first, client-side FIT file viewer for heart rate, core/skin temperature, pace, distance, and more. Works offline after load; no uploads.
 
-- Spec: see docs/spec.md (Version 1.0.0)
+- Spec: see docs/spec.md (Version: see VERSION)
 - Demo/Hosting: single static HTML (index.html). Host on GitHub Pages or serve locally.
 - Privacy: 100% in-browser; your .fit files never leave your device.
 - Versioning: Automatic version bump via GitHub Actions and tags (see CONVENTIONAL_COMMITS.md)
 
-## Features (v1.1.0)
+## Features (current version: see VERSION)
 - Local .FIT parsing; developer field mapping (core/skin)
 - Dual-axis chart with zero-phase smoothing (0–30 s)
 - HSI background bands:
 - <1 green, 1–<2 orange, ≥2 red
-- Elevation backdrop behind the series (auto-scaled) NOT WORKING YET
-- Route canvas (offline), tightly fit to track; start/end markers NOT WORKING YET
+- Elevation backdrop behind the series (auto-scaled)
+- Route canvas (offline), tightly fit to track; start/end markers
 - Touch-friendly:
 - Zoom OFF: finger slide to inspect with crosshair
 - Zoom ON: drag-select time window; Clear Zoom to reset
@@ -35,6 +35,45 @@ Mobile-first, client-side FIT file viewer for heart rate, core/skin temperature,
 - Device line: “<brand> <product> (sw version = X, serial = Y)”
 
 ## Quick Start (Developers)
+
+### Deployment (GitHub Pages)
+- The site deploys automatically via GitHub Actions (see .github/workflows/pages.yml)
+- Live URL: https://daanjj.github.io/fit-file-viewer/
+- If you change the site folder, update pages.yml path: .
+
+### Release & Versioning
+- Versioning is automated via .github/workflows/release.yml and tags.
+- Conventional commits mapping (see CONVENTIONAL_COMMITS.md):
+  - major: BREAKING CHANGE in body or bang syntax (feat(scope)!: ...)
+  - minor: feat:
+  - patch: fix: (default if neither major/minor)
+- Starting at a specific version (e.g., 0.4.3):
+  1. Create tag v0.4.2 on the baseline commit (GitHub Releases page is fine)
+  2. Make a small patch commit to main (e.g., fix(release): initialize version baseline)
+  3. Action bumps to v0.4.3, updates VERSION, CHANGELOG.md, and both BETA v... strings in index.html
+
+### Show Version in the App
+- The release workflow updates both occurrences of BETA v... in index.html.
+- Optional dynamic approach: display Version: vX.Y.Z by reading VERSION at runtime.
+  Add this placeholder element near the header:
+  ```html
+  <div id="appVersion" class="device-line" aria-label="App version"></div>
+  ```
+  And this script snippet inside the existing <script> in index.html:
+  ```html
+  <script>
+  (async () => {
+    try {
+      const res = await fetch('VERSION', { cache: 'no-store' });
+      if (res.ok) {
+        const ver = (await res.text()).trim();
+        const el = document.getElementById('appVersion');
+        if (el) el.textContent = 'Version: v' + ver;
+      }
+    } catch (_) {}
+  })();
+  </script>
+  ```
 1. Clone repo and open index.html in a modern browser, or:
 2. Serve locally:
    ```bash

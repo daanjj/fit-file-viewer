@@ -42,6 +42,30 @@
 
 ## [0.0.1] - 2025-09-10
 
+## [1.2.0] - 2025-09-11
+### Added
+- Leaflet route map with:
+  - Start marker (white fill, green outline) and finish marker (white fill, red outline)
+  - Moving position marker synced to chart crosshair and map clicks
+  - Selection highlighting with auto-fit to selection
+  - Route colorization by:
+    - Heart Rate (smooth gradient)
+    - Pace bands with outlier clamping [3.0, 12.0] min/km
+- Elevation backdrop behind chart series (auto-scaled)
+- Elevation series now smoothed with the same zero-phase smoothing as other series
+- GitHub Pages workflow for automatic deployments
+- Release workflow improvements: CHANGELOG generation, multiple "BETA v..." replacements in index.html, guard to skip when no new commits
+
+### Changed
+- HSI background bands thresholds updated:
+  - <0.1 none, 0.1–1 green, >1–3 orange, >3–7 medium red, >7 dark red
+- Default route line weight increased to match gradient thickness
+- Finish marker redesigned for contrast; Start marker updated to white fill with green outline
+
+### Fixed
+- Proper Garmin elevation parsing using FIT scale (5) and offset (500)
+- Pace color scaling no longer dominated by stops due to clamping
+
 ## [1.1.0] - 2025-09-05
 ### Added
 - HSI-based background bands (green/orange/red)
