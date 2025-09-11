@@ -32,7 +32,20 @@ jobs:
           latest=$(printf "%s\n" "$tags" | sed 's/^v//' | sort -V | tail -n1)
           echo "tag=v$latest" >> "$GITHUB_OUTPUT"
 
+      - name: Check for commits since last tag
+        id: rangecheck
+        shell: bash
+        run: |
+          range="${{ steps.last.outputs.tag }}..HEAD"
+          count=$(git rev-list --count $range || echo 0)
+          if [ "$count" -eq 0 ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Decide bump (major/minor/patch) from commit messages
+        if: steps.rangecheck.outputs.skip != 'true'
         id: bump
         shell: bash
         run: |
@@ -49,6 +62,7 @@ jobs:
           echo "level=$bump" >> "$GITHUB_OUTPUT"
 
       - name: Compute next version
+        if: steps.rangecheck.outputs.skip != 'true'
         id: next
         shell: bash
         run: |
@@ -64,6 +78,7 @@ jobs:
           echo "tag=v$major.$minor.$patch" >> "$GITHUB_OUTPUT"
 
       - name: Generate CHANGELOG
+        if: steps.rangecheck.outputs.skip != 'true'
         shell: bash
         run: |
           range="${{ steps.last.outputs.tag }}..HEAD"
@@ -121,6 +136,7 @@ jobs:
           fi
 
       - name: Update VERSION and files
+        if: steps.rangecheck.outputs.skip != 'true'
         shell: bash
         run: |
           echo "${{ steps.next.outputs.version }}" > VERSION
@@ -135,6 +151,7 @@ jobs:
           git commit -m "chore(release): v${{ steps.next.outputs.version }} [skip ci]" || echo "No changes to commit"
 
       - name: Tag and push
+        if: steps.rangecheck.outputs.skip != 'true'
         shell: bash
         run: |
           git tag -a "${{ steps.next.outputs.tag }}" -m "Release ${{ steps.next.outputs.tag }}" || echo "Tag exists"

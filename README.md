@@ -1,5 +1,7 @@
 # FIT Viewer
 
+[![Deploy to GitHub Pages](https://img.shields.io/badge/Pages-Live-blue?logo=github)](https://<your-username>.github.io/<your-repo>/)
+
 Mobile-first, client-side FIT file viewer for heart rate, core/skin temperature, pace, distance, and more. Works offline after load; no uploads.
 
 - Spec: see docs/spec.md (Version 1.0.0)
