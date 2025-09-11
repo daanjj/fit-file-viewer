@@ -1,6 +1,8 @@
-## [0.5.3] - 2025-09-11
+## [0.5.4] - 2025-09-11
+
+### Fixed
+- did not load
 
 ### Other
-- 68e46cb Merge branch 'main' of github.com:daanjj/fit-file-viewer
-- b7d91dc fix(file picker on MacOS, iOS and Android)
+- 7a3ec54 fix(index): did not load
 
