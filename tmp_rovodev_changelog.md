@@ -1,8 +1,5 @@
-## [0.5.4] - 2025-09-11
-
-### Fixed
-- did not load
+## [0.5.5] - 2025-09-11
 
 ### Other
-- 7a3ec54 fix(index): did not load
+- 9e4a618 fix(android) for file picker
 
