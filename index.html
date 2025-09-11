@@ -171,8 +171,7 @@
     <div id="activityTime" class="device-line" aria-label="Activity date and time range"></div>
 
     <div class="row">
-      <label id="openFileBtn" for="file" class="btn" aria-label="Open file picker for .FIT files">Choose FIT File</label>
-      <input id="file" type="file" accept=".fit,.FIT,application/vnd.ant.fit,application/fit" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0" />
+      <input id="file" type="file" accept=".fit,.FIT,application/vnd.ant.fit,application/fit,application/octet-stream" />
       <button id="resetBtn" class="btn" disabled>Reset</button>
       <button id="zoomModeBtn" class="btn" disabled>Zoom: Off</button>
       <button id="zoomClearBtn" class="btn" disabled>Clear Zoom</button>
@@ -1122,45 +1121,10 @@
     }
 
     const fileInput = document.getElementById('file');
-const openFileBtn = document.getElementById('openFileBtn');
-if (openFileBtn && fileInput) {
-  const isAndroid = /Android/i.test(navigator.userAgent);
-  const canFS = !!(window.showOpenFilePicker);
-  openFileBtn.addEventListener('click', async (e)=>{
-    // Let native label-for="file" behavior run for iOS (don’t preventDefault)
-    if (isAndroid && canFS){
-      // Prevent the label default from opening the hidden input; we handle FS API instead
-      e.preventDefault(); e.stopPropagation();
-      try{
-        const [hdl] = await window.showOpenFilePicker({
-          multiple: false,
-          excludeAcceptAllOption: true,
-          types: [{
-            description: 'FIT Files',
-            accept: {
-              'application/fit': ['.fit'],
-              'application/vnd.ant.fit': ['.fit']
-            }
-          }]
-        });
-        if (hdl){
-          const file = await hdl.getFile();
-          const nameOk = /\.fit$/i.test(file.name||'');
-          const typeOk = /application\/(vnd\.ant\.fit|fit)/i.test(file.type||'');
-          if (!nameOk && !typeOk){
-            messageEl.innerHTML = '<span class="error">Please select a .FIT file.</span>';
-            return;
-          }
-          await handleFitFile(file);
-          try{ if (hint) hint.textContent = 'Loaded: ' + file.name; }catch(_){ }
-          return;
-        }
-      }catch(err){
-        // fall through to hidden input
-      }
-    }
-    fileInput.click();
-  });
+const openFileBtn = null; // reverted: direct input only
+/* Removed Android FS interception; use native input only */
+if (fileInput) {
+  // native input only
 }
     const messageEl = document.getElementById('message');
     const statsEl = document.getElementById('stats');
@@ -1685,17 +1649,40 @@ try {
   }
 } catch(e) {}
 
-async function handleFitFile(file){
-      if (!file) return;
+if (fileInput){
+  fileInput.addEventListener('change', async (e)=>{
+    try { if (messageEl) messageEl.textContent = 'File selected…'; } catch(_) {}
+    const file = e.target.files && e.target.files[0];
+    if (!file) { return; }
+    
+    await handleFitFile(file);
+  });
+}
+// Global fallback in case the element reference fails
+try{
+  document.addEventListener('change', async (ev)=>{
+    const t = ev.target;
+    if (t && t.id === 'file' && t.files && t.files[0]){
+      try { if (messageEl) messageEl.textContent = 'File selected…'; } catch(_) {}
+      await handleFitFile(t.files[0]);
+    }
+  }, true);
+}catch(_){ }
+
+window.handleFitFile = async function(file){
+      if (!file) { return; }
+      
+      try { messageEl.textContent = 'Parsing...'; } catch(e) {}
       
       // Enforce .FIT selection (Android may route via */* and give empty/unknown MIME types)
       const isExtFIT = /\.fit$/i.test((file.name || '').trim());
       const isMimeFIT = /^(application\/(vnd\.ant\.fit|fit|octet-stream))$/i.test((file.type || '').trim());
       
+      
       // If neither extension nor MIME looks like FIT, reject it
       if (!isExtFIT && !isMimeFIT) {
         messageEl.innerHTML = '<span class="error">Please select a .FIT file.</span>';
-        e.target.value = ''; // clear so user can re-pick
+        try{ if (fileInput) fileInput.value = ''; }catch(_){ }
         return;
       }
       
@@ -1710,9 +1697,13 @@ async function handleFitFile(file){
       zoomClearBtn.disabled = true;
 
       try {
+        
         const buf = await file.arrayBuffer();
+        
         const parser = new FitParser();
+        
         const { records, devFieldDescriptions, fileIds, deviceInfos, fileCreators } = parser.parse(buf);
+        
 
         current.records = records;
         current.devDesc = devFieldDescriptions;
@@ -1730,7 +1721,7 @@ async function handleFitFile(file){
 
         deviceNameEl.textContent = computeDeviceStringFromCreator(deviceInfos, fileIds, fileCreators);
 
-        if (!records.length) throw new Error('No record data found');
+        if (!records.length) { throw new Error('No record data found'); }
 
         // Elapsed time
         let firstTs = undefined;
@@ -2068,9 +2059,10 @@ async function handleFitFile(file){
         mapBtn.disabled = (candidates.length === 0);
       } catch (err) {
         console.error(err);
+        logDbg('ERROR: ' + (err && err.stack ? err.stack : (err && err.message ? err.message : String(err))));
         messageEl.innerHTML = '<span class="error">Error: ' + (err && err.message ? err.message : String(err)) + '</span>';
       }
-    });
+    };
 
     function detectHSIKey(devDesc){
       for (const [k, d] of devDesc.entries()) {
