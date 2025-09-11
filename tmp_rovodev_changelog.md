@@ -1,9 +1,5 @@
-## [0.5.0] - 2025-09-10
-
-### Added
-- show elevation profile
+## [0.5.1] - 2025-09-11
 
 ### Other
-- 91d971a Merge branch 'main' of github.com:daanjj/fit-file-viewer
-- 0ddc99d feat(index.html): show elevation profile
+- 6fcb129 chore(workflows)
 
