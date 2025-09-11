@@ -1,3 +1,14 @@
+## [0.5.2] - 2025-09-11
+
+### Changed
+- Mobile file picker UX:
+  - iOS: use label-for="file" + offscreen input to ensure the native Files sheet opens reliably
+  - Android: use File System Access API (when available) with FIT-only filters; fallback to hidden input
+- Narrow accept types to FIT-only to avoid camera/photo providers
+
+### Fixed
+- iOS button unresponsive when programmatically clicking hidden input (use label/trusted gesture instead)
+
 ## [0.5.1] - 2025-09-11
 
 ### Other

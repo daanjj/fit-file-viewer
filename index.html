@@ -171,12 +171,14 @@
     <div id="activityTime" class="device-line" aria-label="Activity date and time range"></div>
 
     <div class="row">
-      <input id="file" type="file" accept=".fit,.FIT,application/vnd.ant.fit,application/fit,application/octet-stream,*/*" />
+      <label id="openFileBtn" for="file" class="btn" aria-label="Open file picker for .FIT files">Choose FIT File</label>
+      <input id="file" type="file" accept=".fit,.FIT,application/vnd.ant.fit,application/fit" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0" />
       <button id="resetBtn" class="btn" disabled>Reset</button>
       <button id="zoomModeBtn" class="btn" disabled>Zoom: Off</button>
       <button id="zoomClearBtn" class="btn" disabled>Clear Zoom</button>
       <button id="mapBtn" class="btn" disabled style="display:none">Map Fields</button>
     </div>
+    <div id="fileHint" class="msg" style="margin-top:4px"></div>
 
     <div class="legend" id="legend">
       <label class="chip"><input type="checkbox" id="toggle-hr" checked><span class="swatch" style="background:var(--hr)"></span><span class="label">Heart Rate <span class="unit">(bpm)</span></span><span class="state" id="state-hr">On</span></label>
@@ -1120,6 +1122,46 @@
     }
 
     const fileInput = document.getElementById('file');
+const openFileBtn = document.getElementById('openFileBtn');
+if (openFileBtn && fileInput) {
+  const isAndroid = /Android/i.test(navigator.userAgent);
+  const canFS = !!(window.showOpenFilePicker);
+  openFileBtn.addEventListener('click', async (e)=>{
+    // Let native label-for="file" behavior run for iOS (don’t preventDefault)
+    if (isAndroid && canFS){
+      // Prevent the label default from opening the hidden input; we handle FS API instead
+      e.preventDefault(); e.stopPropagation();
+      try{
+        const [hdl] = await window.showOpenFilePicker({
+          multiple: false,
+          excludeAcceptAllOption: true,
+          types: [{
+            description: 'FIT Files',
+            accept: {
+              'application/fit': ['.fit'],
+              'application/vnd.ant.fit': ['.fit']
+            }
+          }]
+        });
+        if (hdl){
+          const file = await hdl.getFile();
+          const nameOk = /\.fit$/i.test(file.name||'');
+          const typeOk = /application\/(vnd\.ant\.fit|fit)/i.test(file.type||'');
+          if (!nameOk && !typeOk){
+            messageEl.innerHTML = '<span class="error">Please select a .FIT file.</span>';
+            return;
+          }
+          await handleFitFile(file);
+          try{ if (hint) hint.textContent = 'Loaded: ' + file.name; }catch(_){ }
+          return;
+        }
+      }catch(err){
+        // fall through to hidden input
+      }
+    }
+    fileInput.click();
+  });
+}
     const messageEl = document.getElementById('message');
     const statsEl = document.getElementById('stats');
     const resetBtn = document.getElementById('resetBtn');
@@ -1629,8 +1671,21 @@
       updateStatsUI();
     };
 
-    fileInput.addEventListener('change', async (e)=>{
-      const file = e.target.files && e.target.files[0];
+    // Explain picker behavior to users on mobile
+try {
+  const hint = document.getElementById('fileHint');
+  if (hint) {
+    const isiOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    if (isiOS) {
+      hint.textContent = 'Tip: On iOS, use “Choose File” to select a .FIT file from Files. Photo Library options won\'t work for .FIT.';
+    } else if (isAndroid) {
+      hint.textContent = 'Tip: On Android, pick a file manager when prompted (not camera/gallery) to select a .FIT file.';
+    }
+  }
+} catch(e) {}
+
+async function handleFitFile(file){
       if (!file) return;
       
       // Enforce .FIT selection (Android may route via */* and give empty/unknown MIME types)
