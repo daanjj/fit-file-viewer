@@ -171,7 +171,8 @@
     <div id="activityTime" class="device-line" aria-label="Activity date and time range"></div>
 
     <div class="row">
-      <input id="file" type="file" accept=".fit,.FIT,application/vnd.ant.fit,application/fit,application/octet-stream" />
+      <button id="androidFsBtn" class="btn" style="display:none">Choose FIT File</button>
+      <input id="file" type="file" accept=".fit,.FIT,application/vnd.ant.fit,application/fit" />
       <button id="resetBtn" class="btn" disabled>Reset</button>
       <button id="zoomModeBtn" class="btn" disabled>Zoom: Off</button>
       <button id="zoomClearBtn" class="btn" disabled>Clear Zoom</button>
@@ -1121,10 +1122,36 @@
     }
 
     const fileInput = document.getElementById('file');
-const openFileBtn = null; // reverted: direct input only
-/* Removed Android FS interception; use native input only */
-if (fileInput) {
-  // native input only
+const androidFsBtn = document.getElementById('androidFsBtn');
+const isAndroid = /Android/i.test(navigator.userAgent);
+const canFS = !!(window.showOpenFilePicker);
+if (androidFsBtn && isAndroid && canFS){
+  androidFsBtn.style.display = 'inline-block';
+  // Optional: hide the fallback input on Android if FS API is available
+  try { if (fileInput) fileInput.style.display = 'none'; } catch(_) {}
+  androidFsBtn.addEventListener('click', async (e)=>{
+    e.preventDefault();
+    try{
+      const [hdl] = await window.showOpenFilePicker({
+        multiple: false,
+        excludeAcceptAllOption: true,
+        types: [{
+          description: 'FIT Files',
+          accept: {
+            'application/fit': ['.fit'],
+            'application/vnd.ant.fit': ['.fit']
+          }
+        }]
+      });
+      if (hdl){
+        const file = await hdl.getFile();
+        await handleFitFile(file);
+      }
+    }catch(err){
+      // Fallback to input if user cancels or FS API fails
+      try{ if (fileInput) fileInput.click(); }catch(_){ }
+    }
+  });
 }
     const messageEl = document.getElementById('message');
     const statsEl = document.getElementById('stats');
