@@ -89,7 +89,13 @@
     }
     .btn:disabled{opacity:0.6;cursor:not-allowed}
 
-    .legend{display:grid;gap:10px;margin-top:8px;grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
+    .legend{
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-start; /* New: Centers the items */
+      gap: 10px;
+      margin-top: 8px;
+    }
     .chip{
       display:flex;align-items:center;gap:8px;
       background:#11161d;border:1px solid #2a313b;border-radius:999px;padding:6px 10px;cursor:pointer;
@@ -190,8 +196,6 @@
       <label class="chip" id="chip-hr"><input type="checkbox" id="toggle-hr" checked><span class="swatch" style="background:var(--hr)"></span><span class="label">Heart Rate</span></label>
       <label class="chip" id="chip-core"><input type="checkbox" id="toggle-core" checked><span class="swatch" style="background:var(--core)"></span><span class="label">Core Temp</span></label>
       <label class="chip" id="chip-skin"><input type="checkbox" id="toggle-skin" checked><span class="swatch" style="background:var(--skin)"></span><span class="label">Skin Temp</span></label>
-    </div>
-    <div class="legend">
       <label class="chip" id="chip-hsi"><input type="checkbox" id="toggle-hsi"><span class="swatch" style="background:var(--hsi)"></span><span class="label">Heat Strain Index</span></label>
       <label class="chip" id="chip-dist"><input type="checkbox" id="toggle-dist"><span class="swatch" style="background:var(--dist)"></span><span class="label">Distance</span></label>
       <label class="chip" id="chip-pace"><input type="checkbox" id="toggle-pace"><span class="swatch" style="background:var(--pace)"></span><span class="label">Pace</span></label>
