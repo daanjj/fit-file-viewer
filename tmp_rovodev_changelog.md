@@ -1,5 +1,5 @@
-## [0.5.6] - 2025-09-15
+## [0.5.7] - 2025-09-15
 
 ### Other
-- 2fd5cdd support for power as well as visual improvements
+- f0890fb fix(button sizes reduced)
 
