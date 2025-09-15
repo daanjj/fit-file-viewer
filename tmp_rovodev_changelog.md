@@ -1,5 +1,5 @@
-## [0.5.5] - 2025-09-11
+## [0.5.6] - 2025-09-15
 
 ### Other
-- 9e4a618 fix(android) for file picker
+- 2fd5cdd support for power as well as visual improvements
 
