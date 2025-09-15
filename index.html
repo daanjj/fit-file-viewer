@@ -89,11 +89,12 @@
     }
     .btn:disabled{opacity:0.6;cursor:not-allowed}
 
-    .legend{display:grid;gap:10px;margin-top:8px;grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+    .legend{display:grid;gap:10px;margin-top:8px;grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
     .chip{
       display:flex;align-items:center;gap:8px;
       background:#11161d;border:1px solid #2a313b;border-radius:999px;padding:6px 10px;cursor:pointer;
       user-select:none;
+      max-width: 150px; /* New: Constrains the maximum width of each chip */
     }
     .swatch{width:14px;height:14px;border-radius:50%}
     .chip input{display:none}
