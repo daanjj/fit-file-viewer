@@ -62,7 +62,7 @@ This document describes the current behavior, data flow, and UI of the FIT Viewe
     - Select key, set `scale`, `offset` live.
 - Heat Strain Index (HSI):
   - Detected by name: `"heat strain index"`, or strings containing `heat`+`strain` or `hsi`.
-  - Values are clamped to [0, 5] for the line series; background zones use raw thresholds (see §4.3).
+  - Values are clamped to [0, 10] for the line series; background zones use raw thresholds (see §4.3).
 
 ## 3. Smoothing, Trimming, and Selection
 

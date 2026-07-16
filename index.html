@@ -2089,7 +2089,7 @@ window.handleFitFile = async function(file){
         if (hsiKey) {
           for (const rec of records) {
             const v = rec.dev[hsiKey];
-            if (typeof v === 'number' && isFinite(v)) current.hsiRaw.push({x:rec._elapsed, y:clamp(v, 0, 5)});
+            if (typeof v === 'number' && isFinite(v)) current.hsiRaw.push({x:rec._elapsed, y:clamp(v, 0, 10)});
           }
         }
 
