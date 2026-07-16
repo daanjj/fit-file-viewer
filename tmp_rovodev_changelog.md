@@ -1,6 +1,6 @@
-## [0.5.10] - 2026-07-16
+## [0.5.11] - 2026-07-16
 
 ### Other
-- 87a77d8 style: add standard appearance property to range slider for cross-browser consistency
-- 0085443 updated max value for HSI from 5 to 10
+- 1ca7163 chore: remove client-specific branding from application title and header
+- 682111f style: update title and header text for improved clarity
 
