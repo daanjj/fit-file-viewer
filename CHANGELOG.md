@@ -1,3 +1,10 @@
+## [0.6.0] - 2026-07-18
+
+### Changed
+- Remove BETA label from app title and header; version now shown as vX.Y.Z
+- Update release workflow sed pattern to match new version string format
+- Improve README formatting: add blank lines around headings, lists, and code blocks
+
 ## [0.5.11] - 2026-07-16
 
 ### Other

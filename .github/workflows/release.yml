@@ -142,7 +142,7 @@ jobs:
           echo "${{ steps.next.outputs.version }}" > VERSION
           # Optional: update version string inside index.html (best-effort)
           if [ -f index.html ]; then
-            sed -i "s/BETA v[0-9][0-9.\-]*/BETA v${{ steps.next.outputs.version }}/g" index.html || true
+            sed -i "s/v[0-9][0-9.]*)/v${{ steps.next.outputs.version }})/g" index.html || true
           fi
 
           git config user.name  "github-actions[bot]"
