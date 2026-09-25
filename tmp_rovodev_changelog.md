@@ -1,10 +1,5 @@
-## [0.5.12] - 2026-07-17
-
-### Docs
-- improve README formatting, styling, and documentation clarity
+## [0.5.13] - 2026-09-25
 
 ### Other
-- e2fbad9 release: bump version to 0.6.0, remove BETA label, update release workflow, and refine README formatting
-- b997b99 docs: improve README formatting, styling, and documentation clarity
-- 373a113 style: update application title capitalization in index.html
+- 469ef54 release: bump version to v0.6.1, add drag-and-drop, and improve FIT file validation
 
