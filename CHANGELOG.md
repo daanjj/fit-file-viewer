@@ -1,3 +1,13 @@
+## [0.6.1] - 2026-09-25
+
+### Added
+- Binary header validation for FIT files using `.FIT` signature inspection
+- Drag-and-drop support for FIT files with visual feedback
+- Inline error messages for invalid file selections
+
+### Changed
+- Improved cross-platform file picker compatibility on iOS and Android by removing restrictive file input accept filters and redundant Android picker logic
+
 ## [0.5.12] - 2026-07-17
 
 ### Docs

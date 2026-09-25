@@ -11,7 +11,7 @@
     gtag('config', 'G-GR1R0S0C8M');
   </script>
   <meta charset="utf-8" />
-  <title>FIT File Viewer -- view core/skin temperatures and other stats (v0.5.12)</title>
+  <title>FIT File Viewer -- view core/skin temperatures and other stats (v0.6.1)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <style>
     /* Leaflet map styles */
@@ -147,6 +147,7 @@
     }
     .msg{font-size:14px;color:var(--muted);margin-top:6px}
     .error{color:var(--err)}
+    body.drag-over{outline:3px dashed var(--accent);outline-offset:-8px}
     .ok{color:var(--ok)}
     .warn{color:var(--warn)}
     .footer{color:var(--muted);font-size:12px;text-align:center;padding:16px}
@@ -176,15 +177,14 @@
 </head>
 <body>
   <header>
-    <div class="title">FIT File Viewer -- view core/skin temperatures and other stats (v0.5.12)</div>
+    <div class="title">FIT File Viewer -- view core/skin temperatures and other stats (v0.6.1)</div>
 
     <div class="section-heading" aria-hidden="true">Metadata</div>
     <div id="deviceName" class="device-line" aria-label="Device metadata line"></div>
     <div id="activityTime" class="device-line" aria-label="Activity date and time range"></div>
 
     <div class="row">
-      <button id="androidFsBtn" class="btn" style="display:none">Choose FIT File</button>
-      <input id="file" type="file" accept=".fit,.FIT,application/vnd.ant.fit,application/fit" />
+      <input id="file" type="file" aria-label="Choose a FIT file" />
       <button id="resetBtn" class="btn" disabled>Reset</button>
       <button id="zoomModeBtn" class="btn" disabled>Zoom: Off</button>
       <button id="zoomClearBtn" class="btn" disabled>Clear Zoom</button>
@@ -1134,37 +1134,6 @@
     }
 
     const fileInput = document.getElementById('file');
-const androidFsBtn = document.getElementById('androidFsBtn');
-const isAndroid = /Android/i.test(navigator.userAgent);
-const canFS = !!(window.showOpenFilePicker);
-if (androidFsBtn && isAndroid && canFS){
-  androidFsBtn.style.display = 'inline-block';
-  // Optional: hide the fallback input on Android if FS API is available
-  try { if (fileInput) fileInput.style.display = 'none'; } catch(_) {}
-  androidFsBtn.addEventListener('click', async (e)=>{
-    e.preventDefault();
-    try{
-      const [hdl] = await window.showOpenFilePicker({
-        multiple: false,
-        excludeAcceptAllOption: true,
-        types: [{
-          description: 'FIT Files',
-          accept: {
-            'application/fit': ['.fit'],
-            'application/vnd.ant.fit': ['.fit']
-          }
-        }]
-      });
-      if (hdl){
-        const file = await hdl.getFile();
-        await handleFitFile(file);
-      }
-    }catch(err){
-      // Fallback to input if user cancels or FS API fails
-      try{ if (fileInput) fileInput.click(); }catch(_){ }
-    }
-  });
-}
     const messageEl = document.getElementById('message');
     const statsEl = document.getElementById('stats');
     const resetBtn = document.getElementById('resetBtn');
@@ -1699,43 +1668,80 @@ try {
   }
 } catch(e) {}
 
+// FIT validation by file header, not by extension/MIME type.
+// No `accept` attribute on the input: iOS greys out .fit (no registered UTI)
+// and Android maps accept to MIME types, which .fit does not have.
+const FIT_MIN_SIZE = 14;
+async function isFitFile(file) {
+  if (!file || file.size < FIT_MIN_SIZE) return false;
+  const bytes = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+  const headerSize = bytes[0];
+  const sig = String.fromCharCode(bytes[8], bytes[9], bytes[10], bytes[11]);
+  return (headerSize === 12 || headerSize === 14) && sig === '.FIT';
+}
+window.isFitFile = isFitFile;
+
+function showInvalidFitError(file) {
+  const span = document.createElement('span');
+  span.className = 'error';
+  const name = (file && file.name) ? '"' + file.name + '"' : 'This file';
+  span.textContent = name + ' is not a valid FIT file. Please select a .fit file exported from your device or Garmin Connect.';
+  messageEl.replaceChildren(span);
+  try { if (fileInput) fileInput.value = ''; } catch(_) {}
+}
+
 if (fileInput){
   fileInput.addEventListener('change', async (e)=>{
-    try { if (messageEl) messageEl.textContent = 'File selected…'; } catch(_) {}
     const file = e.target.files && e.target.files[0];
     if (!file) { return; }
-    
+    try { if (messageEl) messageEl.textContent = 'File selected…'; } catch(_) {}
     await handleFitFile(file);
   });
 }
-// Global fallback in case the element reference fails
-try{
-  document.addEventListener('change', async (ev)=>{
-    const t = ev.target;
-    if (t && t.id === 'file' && t.files && t.files[0]){
-      try { if (messageEl) messageEl.textContent = 'File selected…'; } catch(_) {}
-      await handleFitFile(t.files[0]);
-    }
-  }, true);
-}catch(_){ }
+
+// Drag-and-drop: dropped files go through the same validation as picked files
+(function setupDragAndDrop(){
+  let depth = 0;
+  const hasFiles = (e) => e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files');
+  document.addEventListener('dragenter', (e)=>{
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    depth++;
+    document.body.classList.add('drag-over');
+  });
+  document.addEventListener('dragover', (e)=>{
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  });
+  document.addEventListener('dragleave', (e)=>{
+    if (!hasFiles(e)) return;
+    depth = Math.max(0, depth - 1);
+    if (depth === 0) document.body.classList.remove('drag-over');
+  });
+  document.addEventListener('drop', async (e)=>{
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    depth = 0;
+    document.body.classList.remove('drag-over');
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file) await handleFitFile(file);
+  });
+})();
 
 window.handleFitFile = async function(file){
       if (!file) { return; }
       
       try { messageEl.textContent = 'Parsing...'; } catch(e) {}
       
-      // Enforce .FIT selection (Android may route via */* and give empty/unknown MIME types)
-      const isExtFIT = /\.fit$/i.test((file.name || '').trim());
-      const isMimeFIT = /^(application\/(vnd\.ant\.fit|fit|octet-stream))$/i.test((file.type || '').trim());
-      
-      
-      // If neither extension nor MIME looks like FIT, reject it
-      if (!isExtFIT && !isMimeFIT) {
-        messageEl.innerHTML = '<span class="error">Please select a .FIT file.</span>';
-        try{ if (fileInput) fileInput.value = ''; }catch(_){ }
+      // Validate by FIT header (works regardless of extension or MIME type)
+      let valid = false;
+      try { valid = await isFitFile(file); } catch(_) { valid = false; }
+      if (!valid) {
+        showInvalidFitError(file);
         return;
       }
-      
+
       resetBtn.disabled = false;
       zoomModeBtn.disabled = false;
       messageEl.textContent = 'Parsing...';
