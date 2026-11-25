@@ -1,7 +1,11 @@
 name: Deploy Pages
 
 on:
-  push:
+  # Run after the release workflow, so the deployed commit includes the version bump
+  # (the bot's bump commit is pushed with GITHUB_TOKEN and does not trigger push events).
+  workflow_run:
+    workflows: [ release ]
+    types: [ completed ]
     branches: [ main ]
   workflow_dispatch:
 
@@ -21,6 +25,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
 
       # Upload the static site from the repository root
