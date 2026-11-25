@@ -22,9 +22,12 @@ This document describes the current behavior, data flow, and UI of the FIT Viewe
 - Decodes base types (int/uint/float/double)
 - Developer data support:
   - Captures `devIndex:fieldNum` keys in `rec.dev`.
-  - Parses field descriptions (206), extracting:
-    - `name`, `units` (strings)
-    - `scale` (field 6), `offset` (field 7) when present
+  - Parses field descriptions (206) by FIT field number as soon as they are read:
+    - `developer_data_index` (0), `field_definition_number` (1), `fit_base_type_id` (2)
+    - `name` (3), `units` (8) (strings)
+    - `scale` (6), `offset` (7) only when valid (255 and 127 are FIT "invalid" markers and are ignored)
+  - Developer values are decoded with their declared base type; FIT invalid values
+    (e.g. NaN floats, 0xFF/0xFFFF/0x7FFF integers) are stored as NaN and treated as missing.
 
 ### 1.2 Timestamps and Elapsed Time
 - If `timestamp` is present, compute `_elapsed = timestamp - firstTimestamp`.
@@ -60,6 +63,14 @@ This document describes the current behavior, data flow, and UI of the FIT Viewe
   - For COROS, specific name patterns (`core_temperature`, `skin_temperature`) with sensible defaults for scale.
   - Final mapping can be overridden in the “Map Developer Fields” modal:
     - Select key, set `scale`, `offset` live.
+- Atsusa fields (matched by exact developer field name):
+  - `core_est`: Atsusa's modelled core temperature (°C), shown as its own series "Core Est (Atsusa)".
+    It is an estimate, not a sensor reading; a CORE sensor's `core_temperature` stays the Core series.
+  - `wbgt` (°C) and `humidity` (%): shown as a metadata line "Weather (Atsusa): WBGT a–b °C · Humidity a–b %"
+    (min–max over the whole run; a single value when constant). Hidden when neither field is present.
+  - All Atsusa field names (`core_est`, `skin_est`, `wbgt`, `air_temp`, `humidity`, `wind`, `solar`,
+    `alert_level`, `phase`, `wx_source`, `wx_age`, `core_max`, `model_ver`, `tester_code`, `hr_inputs`,
+    `core_est_source`) are excluded from the automatic Core/Skin detection.
 - Heat Strain Index (HSI):
   - Detected by name: `"heat strain index"`, or strings containing `heat`+`strain` or `hsi`.
   - Values are clamped to [0, 10] for the line series; background zones use raw thresholds (see §4.3).
@@ -69,10 +80,10 @@ This document describes the current behavior, data flow, and UI of the FIT Viewe
 ### 3.1 Zero‑phase Smoothing
 - Slider maps 0–100 → 0–30 s (tau).
 - Implemented as forward-backward EMA for zero‑phase characteristics.
-- Applied to: core, skin, HR, HSI, distance, pace, speed, cadence, elevation.
+- Applied to: core, core est, skin, HR, HSI, distance, pace, speed, cadence, elevation.
 
 ### 3.2 Trim Early Noise
-- Compute `cutoffX` = first `coreRaw` value > 0 (if exists).
+- Compute `cutoffX` = first `coreRaw` value > 0 (if exists); when there is no sensor core series, the first `core_est` value is used.
 - When Trim is ON, hide data before `cutoffX` across series and update the time-of-day window label accordingly.
 
 ### 3.3 Zoom and Selection
@@ -87,7 +98,7 @@ This document describes the current behavior, data flow, and UI of the FIT Viewe
 
 ### 4.1 Axes and Series
 - Dual Y axes:
-  - Left: Core/Skin (°C)
+  - Left: Core/Core Est/Skin (°C)
   - Right: HR (bpm), HSI, Distance (km), Pace (min/km), Speed (km/h), Cadence (spm)
 - X axis modes:
   - Elapsed time (default) – shows 00:00 at origin and increments
@@ -113,7 +124,7 @@ This document describes the current behavior, data flow, and UI of the FIT Viewe
 - Per-series nearest value shown with formatting:
   - °C to 2 decimals, bpm integer, pace `m:ss /km`, distance km with 2 decimals, speed km/h with 2 decimals, cadence integer spm.
 - Stats panel (visible range):
-  - Max Core, Max Skin, Max HR, Window duration
+  - Max Core, Max Core Est (when present), Max Skin, Max HR, Window duration
   - Optional: Max HSI, Max Distance, Best/Avg Pace, Avg HR, Max Speed, Max Cadence – depending on toggles.
 
 ## 5. Map (Leaflet)
@@ -142,7 +153,7 @@ This document describes the current behavior, data flow, and UI of the FIT Viewe
 
 ## 6. Controls and Toggles
 
-- Series toggles: HR, Core, Skin, HSI, Distance, Pace, Speed, Cadence.
+- Series toggles: HR, Core, Core Est (only when present), Skin, HSI, Distance, Pace, Speed, Cadence.
 - Trim Early Noise.
 - Time-of-day axis toggle.
 - Zoom mode + Clear Zoom.
@@ -164,7 +175,8 @@ This document describes the current behavior, data flow, and UI of the FIT Viewe
   - Guard: if there are no commits since the last tag, skip the above steps.
 
 ### 7.2 Pages Deployment
-- `.github/workflows/pages.yml` deploys the repo root as a static site to GitHub Pages on push to `main`.
+- Production (https://thermoclinics.nl/fit-file-viewer/) is served by Cloudflare Pages from this repo's `main` branch; the whole repo root is published, so keep private files out of git.
+- `.github/workflows/pages.yml` also deploys the repo root as a static site to GitHub Pages on push to `main`.
 - Concurrency cancels older builds; only the latest is deployed.
 
 ## 8. Extensibility and Configuration

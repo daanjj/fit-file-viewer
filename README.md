@@ -12,6 +12,7 @@ Mobile-first, client-side FIT file viewer for heart rate, core/skin temperature,
 ## Features (current version: see VERSION)
 
 - Local .FIT parsing; developer field mapping (core/skin)
+- Atsusa support: `core_est` (modelled core temperature) as its own series; WBGT and humidity summary line
 - Dual-axis chart with zero-phase smoothing (0–30 s)
 - HSI background bands:
 - <1 green, 1–<2 orange, ≥2 red

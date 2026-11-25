@@ -27,6 +27,7 @@
       --hr:#e53935;
       --core:#1e88e5;
       --skin:#fb8c00;
+      --core-est:#00bfa5;
       --grid:#232a32;
       --ok:#2e7d32;
       --warn:#ef6c00;
@@ -182,6 +183,7 @@
     <div class="section-heading" aria-hidden="true">Metadata</div>
     <div id="deviceName" class="device-line" aria-label="Device metadata line"></div>
     <div id="activityTime" class="device-line" aria-label="Activity date and time range"></div>
+    <div id="weatherLine" class="device-line" aria-label="Weather conditions recorded by Atsusa" style="display:none"></div>
 
     <div class="row">
       <input id="file" type="file" aria-label="Choose a FIT file" />
@@ -195,6 +197,7 @@
     <div class="legend" id="legend">
       <label class="chip" id="chip-hr"><input type="checkbox" id="toggle-hr" checked><span class="swatch" style="background:var(--hr)"></span><span class="label">Heart Rate</span></label>
       <label class="chip" id="chip-core"><input type="checkbox" id="toggle-core" checked><span class="swatch" style="background:var(--core)"></span><span class="label">Core Temp</span></label>
+      <label class="chip" id="chip-coreest" style="display:none"><input type="checkbox" id="toggle-coreest" checked><span class="swatch" style="background:var(--core-est)"></span><span class="label">Core Est (Atsusa)</span></label>
       <label class="chip" id="chip-skin"><input type="checkbox" id="toggle-skin" checked><span class="swatch" style="background:var(--skin)"></span><span class="label">Skin Temp</span></label>
       <label class="chip" id="chip-hsi"><input type="checkbox" id="toggle-hsi"><span class="swatch" style="background:var(--hsi)"></span><span class="label">Heat Strain Index</span></label>
       <label class="chip" id="chip-dist"><input type="checkbox" id="toggle-dist"><span class="swatch" style="background:var(--dist)"></span><span class="label">Distance</span></label>
@@ -495,7 +498,7 @@
 
       _route(globalMsgNum, obj, records){
         if (globalMsgNum === 20) records.push(obj);
-        else if (globalMsgNum === 206) this.fieldDescObjs.push(obj);
+        else if (globalMsgNum === 206) { this.fieldDescObjs.push(obj); this._registerFieldDescription(obj); }
         else if (globalMsgNum === 0) this.fileIds.push(obj);
         else if (globalMsgNum === 23) this.deviceInfos.push(obj);
         else if (globalMsgNum === 49) this.fileCreators.push(obj);
@@ -516,7 +519,8 @@
         if (def.devFields && def.devFields.length) {
           for (const df of def.devFields) {
             const key = df.devIndex + ':' + df.num;
-            const value = this._readDevValue(view, pos, df.size, def.little);
+            const fd = this._fieldDescByKey && this._fieldDescByKey.get(key);
+            const value = this._readDevValue(view, pos, df.size, def.little, fd ? fd.baseTypeId : undefined);
             pos += df.size;
             obj.dev[key] = value;
             this._devKeysUsed.add(key);
@@ -543,7 +547,35 @@
         }
       }
 
-      _readDevValue(view, pos, size, little) {
+      // Register a field_description (global msg 206) as soon as it is read, so later
+      // developer values can be decoded with their declared base type.
+      // FIT field numbers: 0 developer_data_index, 1 field_definition_number,
+      // 2 fit_base_type_id, 3 field_name, 6 scale, 7 offset, 8 units.
+      _registerFieldDescription(obj) {
+        const f = obj.fields || {};
+        const idx = f[0], num = f[1];
+        if (!Number.isInteger(idx) || !Number.isInteger(num) || idx === 0xFF || num === 0xFF) return;
+        if (!this._fieldDescByKey) this._fieldDescByKey = new Map();
+        const d = { baseTypeId: Number.isInteger(f[2]) ? (f[2] & 0x1F) : undefined };
+        if (typeof f[3] === 'string' && f[3].trim()) d.name = f[3].trim();
+        if (typeof f[8] === 'string' && f[8].trim()) d.units = f[8].trim();
+        // 255 (uint8) and 127 (sint8) are the FIT "invalid" markers: no scale/offset given
+        if (Number.isFinite(f[6]) && f[6] !== 0 && f[6] !== 0xFF) d.scale = f[6];
+        if (Number.isFinite(f[7]) && f[7] !== 0x7F) d.offset = f[7];
+        this._fieldDescByKey.set(idx + ':' + num, d);
+      }
+
+      // Decode a developer field value. With a known base type the value is read as that
+      // type and FIT invalid markers become NaN (= missing); otherwise fall back to guessing by size.
+      _readDevValue(view, pos, size, little, baseTypeId) {
+        const typeSize = {0:1,1:1,2:1,3:2,4:2,5:4,6:4,8:4,9:8,10:1,11:2,12:4,13:1,14:8,15:8,16:8};
+        if (baseTypeId === 7) return this._readValue(view, pos, 7, size, little);
+        if (baseTypeId !== undefined && typeSize[baseTypeId] === size) {
+          const v = this._readValue(view, pos, baseTypeId, size, little);
+          const invalid = {0:0xFF,1:0x7F,2:0xFF,3:0x7FFF,4:0xFFFF,5:0x7FFFFFFF,6:0xFFFFFFFF,10:0,11:0,12:0,13:0xFF}[baseTypeId];
+          if (typeof v === 'number' && (!Number.isFinite(v) || (invalid !== undefined && v === invalid))) return NaN;
+          return v;
+        }
         if (size === 4) { const f = view.getFloat32(pos, little); if (Number.isFinite(f) && Math.abs(f) < 1e12) return f; return view.getInt32(pos, little); }
         else if (size === 2) return view.getInt16(pos, little);
         else if (size === 1) return view.getUint8(pos);
@@ -555,7 +587,21 @@
         const candidates = Array.from(this._devKeysUsed);
         if (candidates.length === 0) return;
         const set = new Set(candidates);
+        // Preferred: descriptions decoded by their real FIT field numbers
+        const mapped = new Set();
+        if (this._fieldDescByKey) {
+          for (const [key, d] of this._fieldDescByKey) {
+            if (!set.has(key)) continue;
+            const ex = this.devFieldDescriptions.get(key) || {};
+            for (const p of ['name','units','scale','offset','baseTypeId']) if (d[p] !== undefined) ex[p] = d[p];
+            this.devFieldDescriptions.set(key, ex);
+            mapped.add(key);
+          }
+        }
+        // Fallback for descriptions without usable index/number fields: old heuristic
         for (const obj of this.fieldDescObjs) {
+          const f0 = obj.fields && obj.fields[0], f1 = obj.fields && obj.fields[1];
+          if (Number.isInteger(f0) && Number.isInteger(f1) && mapped.has(f0 + ':' + f1)) continue;
           const nums1b=[], strings=[];
           for (const v of Object.values(obj.fields)) {
             if (typeof v === 'number' && Number.isInteger(v) && v>=0 && v<=255) nums1b.push(v);
@@ -1147,6 +1193,32 @@
       missingMsgEl.textContent = 'The following fields were not found in the FIT file: ' + fields.join(', ');
     }
     function showIf(el, on){ if (el) el.style.display = on ? '' : 'none'; }
+
+    // Min/max of a developer field over all records (null when absent or never valid)
+    function rangeOfDevField(records, key){
+      if (!key) return null;
+      let min = Infinity, max = -Infinity;
+      for (const r of records) {
+        const v = r.dev[key];
+        if (typeof v === 'number' && Number.isFinite(v)) { if (v < min) min = v; if (v > max) max = v; }
+      }
+      return (min === Infinity) ? null : {min, max};
+    }
+    // Atsusa weather summary: WBGT and relative humidity for the whole run (not chart lines)
+    function updateWeatherLine(){
+      const el = document.getElementById('weatherLine');
+      if (!el) return;
+      const w = current && current.weather;
+      const fmtRange = (r, dec, unit) => {
+        const a = r.min.toFixed(dec), b = r.max.toFixed(dec);
+        return (a === b ? a : a + '–' + b) + unit;
+      };
+      const parts = [];
+      if (w && w.wbgt) parts.push('WBGT ' + fmtRange(w.wbgt, 1, ' °C'));
+      if (w && w.humidity) parts.push('Humidity ' + fmtRange(w.humidity, 0, ' %'));
+      el.textContent = parts.length ? 'Weather (Atsusa): ' + parts.join(' · ') : '';
+      el.style.display = parts.length ? 'block' : 'none';
+    }
     const smoothSlider = document.getElementById('smoothSlider');
     const smoothText = document.getElementById('smoothText');
     const deviceNameEl = document.getElementById('deviceName');
@@ -1476,6 +1548,7 @@
     const toggles = {
       hr:   document.getElementById('toggle-hr'),
       core: document.getElementById('toggle-core'),
+      coreest: document.getElementById('toggle-coreest'),
       skin: document.getElementById('toggle-skin'),
       hsi:  document.getElementById('toggle-hsi'),
       dist: document.getElementById('toggle-dist'),
@@ -1541,6 +1614,7 @@
       hrRaw:   [],
       coreRaw: [],
       skinRaw: [],
+      coreEstRaw: [],
       hsiRaw:  [],
       distRaw: [],
       paceRaw: [],
@@ -1552,6 +1626,7 @@
       hrSeries:   [],
       coreSeries: [],
       skinSeries: [],
+      coreEstSeries: [],
       hsiSeries:  [],
       distSeries: [],
       paceSeries: [],
@@ -1628,11 +1703,13 @@
       current = {
         records: [], devDesc: new Map(), fileIds: [], deviceInfos: [], fileCreators: [],
         baseTime: 0,
-        hrRaw: [], coreRaw: [], skinRaw: [], hsiRaw: [], distRaw: [], paceRaw: [], speedRaw: [], cadRaw: [], elevRaw: [],
-        hrSeries: [], coreSeries: [], skinSeries: [], hsiSeries: [], distSeries: [], paceSeries: [], speedSeries: [], cadSeries: [], elevSeries: [],
+        hrRaw: [], coreRaw: [], skinRaw: [], coreEstRaw: [], hsiRaw: [], distRaw: [], paceRaw: [], speedRaw: [], cadRaw: [], elevRaw: [],
+        hrSeries: [], coreSeries: [], skinSeries: [], coreEstSeries: [], hsiSeries: [], distSeries: [], paceSeries: [], speedSeries: [], cadSeries: [], elevSeries: [],
         coreKey: null, skinKey: null, coreScale: 1, skinScale: 1, coreOffset: 0, skinOffset: 0,
-        tauSec: 0, cutoffX: 0, selection: null, zoomMode: false, xAxisMode: 'delta'
+        tauSec: 0, cutoffX: 0, selection: null, zoomMode: false, xAxisMode: 'delta',
+        weather: null
       };
+      updateWeatherLine();
       toggles.xaxis.checked = false;
       refreshToggleStates();
       chart.setZoomMode(false);
@@ -1932,6 +2009,31 @@ window.handleFitFile = async function(file){
         for (const rec of records) for (const k in rec.dev) allDevKeys.add(k);
         const candidates = Array.from(allDevKeys);
 
+        // Atsusa developer fields (exact names). core_est is Atsusa's modelled core temperature,
+        // not a sensor reading, so Atsusa fields never feed the Core/Skin detection below.
+        const ATSUSA_FIELD_NAMES = new Set(['core_est','skin_est','wbgt','air_temp','humidity','wind','solar',
+          'alert_level','phase','wx_source','wx_age','core_max','model_ver','tester_code','hr_inputs','core_est_source']);
+        const devName = (k) => ((devFieldDescriptions.get(k) || {}).name || '').trim().toLowerCase();
+        const atsusaKey = (name) => candidates.find(k => devName(k) === name) || null;
+        const tempCandidates = candidates.filter(k => !ATSUSA_FIELD_NAMES.has(devName(k)));
+
+        const coreEstKey = atsusaKey('core_est');
+        current.coreEstRaw = [];
+        if (coreEstKey) {
+          for (const rec of records) {
+            const v = rec.dev[coreEstKey];
+            if (typeof v === 'number' && Number.isFinite(v) && v > 0) current.coreEstRaw.push({x: rec._elapsed, y: v});
+          }
+        }
+        current.weather = {
+          wbgt: rangeOfDevField(records, atsusaKey('wbgt')),
+          humidity: rangeOfDevField(records, atsusaKey('humidity')),
+        };
+        updateWeatherLine();
+
+        // Scale/offset come from this file only, never from a previously loaded file
+        current.coreScale = 1; current.coreOffset = 0; current.skinScale = 1; current.skinOffset = 0;
+
         let coreKey = null, skinKey = null;
 
         // COROS specific: look for temperature developer fields with various naming patterns
@@ -2007,7 +2109,7 @@ window.handleFitFile = async function(file){
         function looksLikeSkin(d){ return d && d.name && /skin/i.test(d.name); }
         function unitsC(d){ return d && d.units && /c|°/i.test(d.units); }
         if (current.manufacturer !== 167) {
-          for (const k of candidates) {
+          for (const k of tempCandidates) {
             const d = descFor(k);
             if (unitsC(d) && looksLikeCore(d)) coreKey = coreKey || k;
             if (unitsC(d) && looksLikeSkin(d)) skinKey = skinKey || k;
@@ -2035,7 +2137,7 @@ window.handleFitFile = async function(file){
 
         function guessTempKey(excludeKey=null){
           let bestKey=null, bestScore=-Infinity, bestScale=1, bestOffset=0;
-          for (const k of candidates) {
+          for (const k of tempCandidates) {
             if (k===excludeKey) continue;
             const arr = devSeriesByKey.get(k);
             if (!arr || arr.length<5) continue;
@@ -2129,6 +2231,7 @@ window.handleFitFile = async function(file){
         const hasHR   = Array.isArray(current.hrRaw)   && current.hrRaw.some(p => Number.isFinite(p.y));
         const hasCore = Array.isArray(current.coreRaw) && current.coreRaw.some(p => Number.isFinite(p.y));
         const hasSkin = Array.isArray(current.skinRaw) && current.skinRaw.some(p => Number.isFinite(p.y));
+        const hasCoreEst = Array.isArray(current.coreEstRaw) && current.coreEstRaw.some(p => Number.isFinite(p.y));
         const hasHSI  = Array.isArray(current.hsiRaw)  && current.hsiRaw.some(p => Number.isFinite(p.y));
         const hasDist = Array.isArray(current.distRaw) && current.distRaw.some(p => Number.isFinite(p.y));
         const hasPace = Array.isArray(current.paceRaw) && current.paceRaw.some(p => Number.isFinite(p.y));
@@ -2138,6 +2241,7 @@ window.handleFitFile = async function(file){
 
         showIf(document.getElementById('chip-hr'), hasHR);
         showIf(document.getElementById('chip-core'), hasCore);
+        showIf(document.getElementById('chip-coreest'), hasCoreEst);
         showIf(document.getElementById('chip-skin'), hasSkin);
         showIf(document.getElementById('chip-hsi'), hasHSI);
         showIf(document.getElementById('chip-dist'), hasDist);
@@ -2226,6 +2330,7 @@ window.handleFitFile = async function(file){
       current.hrSeries   = smoothZeroPhase(current.hrRaw,   tau);
       current.coreSeries = smoothZeroPhase(current.coreRaw, tau);
       current.skinSeries = smoothZeroPhase(current.skinRaw, tau);
+      current.coreEstSeries = smoothZeroPhase(current.coreEstRaw, tau);
       current.hsiSeries  = smoothZeroPhase(current.hsiRaw,  tau);
       current.distSeries = smoothZeroPhase(current.distRaw, tau);
       current.paceSeries = smoothZeroPhase(current.paceRaw, tau);
@@ -2238,8 +2343,9 @@ window.handleFitFile = async function(file){
     function updateCutoff(){
       let cut = 0;
       const eps = 1e-9;
-      if (current.coreRaw && current.coreRaw.length) {
-        for (const p of current.coreRaw) {
+      const coreForCut = (current.coreRaw && current.coreRaw.length) ? current.coreRaw : current.coreEstRaw;
+      if (coreForCut && coreForCut.length) {
+        for (const p of coreForCut) {
           if (Number.isFinite(p.y) && p.y > 0 + eps) { cut = p.x; break; }
         }
       }
@@ -2263,6 +2369,7 @@ window.handleFitFile = async function(file){
 
       const series = [
         { id:'core', name:'Core Temp',  color:getVar('--core','#1e88e5'), axis:'left',  visible: toggles.core.checked, points: filterPoints(current.coreSeries), fmt:(v)=> `${(Math.round(v*100)/100).toFixed(2)} °C` },
+        { id:'coreest', name:'Core Est', color:getVar('--core-est','#00bfa5'), axis:'left', visible: toggles.coreest.checked, points: filterPoints(current.coreEstSeries), fmt:(v)=> `${(Math.round(v*100)/100).toFixed(2)} °C` },
         { id:'skin', name:'Skin Temp',  color:getVar('--skin','#fb8c00'), axis:'left',  visible: toggles.skin.checked, points: filterPoints(current.skinSeries), fmt:(v)=> `${(Math.round(v*100)/100).toFixed(2)} °C` },
 
         { id:'hr',   name:'Heart Rate', color:getVar('--hr','#e53935'),   axis:'right', visible: toggles.hr.checked,   points: filterPoints(current.hrSeries),   fmt:(v)=> `${Math.round(v)} bpm` },
@@ -2307,9 +2414,11 @@ window.handleFitFile = async function(file){
       const hrMax   = arrayMaxInView(current.hrRaw);
       const coreMax = arrayMaxInView(current.coreRaw);
       const skinMax = arrayMaxInView(current.skinRaw);
+      const coreEstMax = arrayMaxInView(current.coreEstRaw);
 
       const parts = [
         `<span>Max Core: <span class="kbd">${coreMax!=null ? (Math.round(coreMax*100)/100).toFixed(2)+' °C' : '--'}</span></span>`,
+        ...(current.coreEstRaw && current.coreEstRaw.length ? [`<span>Max Core Est: <span class="kbd">${coreEstMax!=null ? (Math.round(coreEstMax*100)/100).toFixed(2)+' °C' : '--'}</span></span>`] : []),
         `<span>Max Skin: <span class="kbd">${skinMax!=null ? (Math.round(skinMax*100)/100).toFixed(2)+' °C' : '--'}</span></span>`,
         `<span>Max HR: <span class="kbd">${hrMax!=null ? Math.round(hrMax)+' bpm' : '--'}</span></span>`,
         `<span>Window: <span class="kbd">${fmtHMS(viewDuration())}</span></span>`
