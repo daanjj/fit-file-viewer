@@ -2,3 +2,14 @@
 Thumbs.db
 .idea/
 .vscode/
+
+# Release workflow scratch file
+tmp_rovodev_changelog.md
+
+# Private reference spreadsheet (would be published by Pages) and Excel lock files
+Atsusa_FIT_fields.xlsx
+~$*
+
+# Personal test recordings (tester code, GPS) — keep out of the published site
+FIT test files/20261119-atsusa.fit
+FIT test files/20261120_Garmin020_*.fit
