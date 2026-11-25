@@ -1,3 +1,15 @@
+## [0.7.0] - 2026-11-25
+
+### Added
+- show Atsusa core_est and weather; fix developer field decoding
+
+### Other
+- fb91c0e ci: trigger release and deploy for the Atsusa changes
+- ec1b21c ci: deploy the version-bumped commit so the live site shows the new version
+- 53c126c feat: show Atsusa core_est and weather; fix developer field decoding
+- 19c210c chore(release): restore v0.6.1 and keep private files out of the site
+- 15eedc3 chore(release): v0.5.13 [skip ci]
+
 ## [0.6.1] - 2026-09-25
 
 ### Added
