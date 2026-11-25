@@ -1,3 +1,11 @@
+## [0.7.1] - 2026-11-25
+
+### Fixed
+- decode speed and pace from enhanced_speed instead of a constant field
+
+### Other
+- 2dc16ac fix: decode speed and pace from enhanced_speed instead of a constant field
+
 ## [0.7.0] - 2026-11-25
 
 ### Added
