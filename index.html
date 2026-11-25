@@ -1926,46 +1926,27 @@ window.handleFitFile = async function(file){
             distKmRaw.push({x:t, y:dKm});
           }
 
-          // Pace: prefer field 6 (speed) when reliable; otherwise try field 134; otherwise distance delta
-          const rawEnh134 = r.fields[134];
-          const rawSpeed = r.fields[6]; // may be scaled
-          let pace = NaN;
-
-          const decodeSpeed = (v)=>{
-            if (typeof v !== 'number' || !isFinite(v)) return NaN;
-            if (v > 25) return v/1000; // scaled by 1000
-            return v;
-          };
-          const fromSpeed = (v)=>{
-            const s = decodeSpeed(v);
-            return (typeof s==='number' && isFinite(s) && s>0.05) ? (1000/s)/60 : NaN;
-          };
-
-          // Use field 6 first if plausible (>0.05 m/s)
-          if (rawSpeed !== undefined) pace = fromSpeed(rawSpeed);
-          // Else try field 134, but only if plausible
-          if (!isFinite(pace) && rawEnh134 !== undefined) {
-            const s134 = decodeSpeed(rawEnh134);
-            if (isFinite(s134) && s134>0.05) pace = (1000/s134)/60;
+          // Speed per FIT profile (record message): field 73 enhanced_speed (uint32) and
+          // field 6 speed (uint16), both scale 1000 -> m/s. Prefer 73; skip FIT invalid
+          // markers (0xFFFFFFFF / 0xFFFF). Fall back to distance deltas only when the
+          // record has no valid speed field at all.
+          const rawEnhSpeed = r.fields[73];
+          const rawSpeed = r.fields[6];
+          let mps = NaN;
+          if (typeof rawEnhSpeed === 'number' && Number.isFinite(rawEnhSpeed) && rawEnhSpeed !== 0xFFFFFFFF) mps = rawEnhSpeed / 1000;
+          else if (typeof rawSpeed === 'number' && Number.isFinite(rawSpeed) && rawSpeed !== 0xFFFF) mps = rawSpeed / 1000;
+          else if (typeof dRaw === 'number' && isFinite(dRaw) && prevDcm!=null && prevT!=null) {
+            const dd_cm = dRaw - prevDcm;
+            const dt = t - prevT;
+            if (dt > 0 && dd_cm >= 0) mps = (dd_cm/100) / dt;
           }
 
-          if (!isFinite(pace)) {
-            if (typeof dRaw === 'number' && isFinite(dRaw) && prevDcm!=null && prevT!=null) {
-              const dd_cm = dRaw - prevDcm;
-              const dt = t - prevT;
-              if (dt > 0 && dd_cm >= 0) {
-                const v = (dd_cm/100) / dt; // m/s
-                if (v > 0.05) pace = (1000/v)/60;
-              }
-            }
-          }
-          paceRaw.push({x:t, y: isFinite(pace) ? pace : NaN});
+          // Pace (min/km): undefined when (nearly) stopped, so the line shows a gap
+          const pace = (Number.isFinite(mps) && mps > 0.05) ? (1000/mps)/60 : NaN;
+          paceRaw.push({x:t, y: pace});
 
-          // Speed (km/h) - convert from pace (min/km)
-          let speed = NaN;
-          if (isFinite(pace) && pace > 0) {
-            speed = 60 / pace; // Convert min/km to km/h
-          }
+          // Speed (km/h): 0 when stopped
+          const speed = Number.isFinite(mps) ? mps * 3.6 : NaN;
           speedRaw.push({x:t, y: speed});
 
           // Power (W)

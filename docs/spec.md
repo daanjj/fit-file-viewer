@@ -45,12 +45,12 @@ This document describes the current behavior, data flow, and UI of the FIT Viewe
 - Cadence (field 4): device-specific scaling:
   - Garmin (1) or COROS (167): steps/stride → spm (×2) → `cadRaw`.
 - Distance (field 5): centimeters → km (`/100000`) → `distRaw`.
-- Speed / Pace:
-  - Prefer field 6 (speed, m/s). Some devices scale by 1000 → decode: `>25 → /1000`.
-  - Alternate enhanced speed: field 134.
-  - Pace (min/km) = `(1000 / mps) / 60`, only if `mps > 0.05`.
-  - Fallback: compute from distance deltas if needed.
-  - Derived Speed (km/h) = `60 / pace`.
+- Speed / Pace (per the FIT SDK profile for the record message):
+  - Prefer field 73 `enhanced_speed` (uint32), else field 6 `speed` (uint16); both scale 1000 → m/s.
+  - FIT invalid markers are skipped (`0xFFFFFFFF` for field 73, `0xFFFF` for field 6).
+  - Fallback, only when a record has no valid speed field: distance delta / time delta.
+  - Speed (km/h) = `mps × 3.6`; 0 when stopped.
+  - Pace (min/km) = `(1000 / mps) / 60`, only if `mps > 0.05`; otherwise missing (gap in the line).
 - Elevation:
   - Prefer `enhanced_altitude` (field 78), fallback `altitude` (field 2).
   - FIT spec scale/offset: meters = `raw/5 - 500`.

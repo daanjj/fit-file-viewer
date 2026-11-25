@@ -32,7 +32,7 @@ Mobile-first, client-side FIT file viewer for heart rate, core/skin temperature,
   - Zoom mode OFF (default): slide finger to inspect values with a crosshair
   - Zoom mode ON: drag to select a time range; “Clear Zoom” to reset
 - Zero-phase smoothing (0–30 s)
-- Pace from enhanced speed (m/s) → min/km; fallback to speed or distance deltas
+- Speed and pace from enhanced_speed (field 73), else speed (field 6); fallback to distance deltas
 - Distance shown in km; default assumption distance is in centimeters (cm→km)
 - Mapping modal for developer fields (core/skin), with scale factors
 - Device line: “<brand> <product> (sw version = X, serial = Y)”
